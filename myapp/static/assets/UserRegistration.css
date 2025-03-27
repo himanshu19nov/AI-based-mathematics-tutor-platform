@@ -1,0 +1,161 @@
+/* General Styling */
+.user-registration {
+  width: 80%;
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 30px;
+  border: 10px solid #ccc;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+  align-items: center; /* Centering the inner box */
+}
+
+/* Mode Toggle Buttons */
+.mode-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.mode-toggle button {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: 2px solid #333;
+  background-color: #FFA726; /* Orange Color */
+  color: white;
+  font-size: 14px;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.mode-toggle .active {
+  background-color: #EF6C00; /* Darker Orange */
+}
+
+/* Form Container */
+.form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  width: 100%; /* Ensuring the box occupies full width */
+  max-width: 600px; /* Centering the box */
+}
+
+/* Input Fields */
+.form-container input,
+.form-container select {
+  width: 60%; /* Increased width for better alignment */
+  padding: 10px;
+  margin-top: 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+/* Academic Level Checkboxes */
+.checkbox-group {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr); /* Neat alignment */
+  gap: 0px;
+  margin-top: 10px;
+  width: 80%;
+}
+
+/* Buttons */
+.form-container button {
+  padding: 15px 100px;
+  font-size: 14px;
+  border: 2px solid #333;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background-color 0.3s;
+}
+
+.form-container button:hover {
+  background-color: #0056b3;
+}
+
+/* Message Styling */
+.message {
+  margin-top: 10px;
+  color: red;
+  text-align: center;
+}
+
+/* Search Table */
+.table-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.search-table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+}
+
+.search-table th,
+.search-table td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.search-table th {
+  background-color: #f2f2f2;
+}
+
+/* Password Reset Styling */
+.radio-group {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.radio-group label {
+  margin-right: 10px;
+}
+
+.new-password-input {
+  margin-top: 10px;
+}
+
+/* Search Input Styling */
+.search-container input {
+  width: 60%;
+  padding: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.search-container button {
+  padding: 10px 20px;
+  border: 2px solid #333;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-top: 10px;
+  transition: background-color 0.3s;
+}
+
+.search-container button:hover {
+  background-color: #0056b3;
+}
+
+/* This is the backend API version of css, THE BEST version so far, all functional */
