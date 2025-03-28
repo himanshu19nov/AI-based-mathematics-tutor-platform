@@ -1,0 +1,105 @@
+.view-result-container {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  box-sizing: border-box;
+  overflow-x: hidden; /* Prevents horizontal overflow */
+}
+
+.tab-menu {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-menu button {
+  padding: 10px;
+  cursor: pointer;
+  border: none;
+  background-color: #ddd;
+}
+
+.tab-menu button.active {
+  background-color: rgb(0, 21, 255);
+  font-weight: bold;
+}
+
+.selection-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.selection-container label {
+  font-weight: bold;
+}
+
+.button-container {
+  margin-bottom: 20px;
+}
+
+.button-container button {
+  margin-right: 10px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.individual-performance, .overall-performance {
+  padding: 10px;
+  border: 1px solid #ccc;
+  margin-top: 20px;
+}
+
+.question-navigation {
+  margin-top: 10px;
+}
+
+.question-navigation button {
+  margin-right: 5px;
+  padding: 5px;
+}
+
+.navigation-buttons {
+  margin-top: 10px;
+}
+
+.navigation-buttons button {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.mark-chart ul {
+  list-style: none;
+  padding: 0;
+}
+
+.mark-chart li {
+  padding: 5px;
+  border-bottom: 1px solid #ccc;
+}
+
+@media screen and (max-width: 768px) {
+  .view-result-container {
+      padding: 15px;
+  }
+  .tab-menu {
+      flex-direction: column;
+  }
+  .selection-container {
+      flex-direction: column;
+  }
+  .button-container button {
+      width: 100%;
+      margin-right: 0;
+  }
+  .individual-performance, .overall-performance {
+      width: 100%;
+      box-sizing: border-box;
+  }
+  .navigation-buttons button {
+      width: 100%;
+  }
+}
