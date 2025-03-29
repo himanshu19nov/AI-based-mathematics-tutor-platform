@@ -1,25 +1,93 @@
+from django.contrib.auth.hashers import make_password
 from django.db import models
 
-# Users Table
-class User(models.Model):
-    ROLE_CHOICES = [
-        ('Teacher', 'Teacher'),
-        ('Student', 'Student'),
-        ('Parent', 'Parent'),
-    ]
 
-    user_id = models.AutoField(primary_key=True, db_column='user_id')
-    full_name = models.CharField(max_length=255)
-    email = models.EmailField(unique=True, blank=True, null=True)
-    password_hash = models.CharField(max_length=255)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    created_at = models.DateTimeField(auto_now_add=True)
+
+class UserManager(models.Manager):
+    def create_user(self, username, email, firstName, lastName, password, role, academicLevel, userStatus):
+        """
+        Creates and returns a user with an email, username, hashed password, and other details.
+        """
+        # Combine first_name and last_name to create full_name
+        fullName = f"{firstName} {lastName}"
+
+        # Create and return a user with a hashed password
+        user = self.model(
+            username=username,
+            email=email,
+            firstName=firstName,
+            lastName=lastName,
+            fullName=fullName,
+            role=role,
+            academicLevel=academicLevel,
+            userStatus=userStatus
+        )
+        user.password = make_password(password)  # Hashing the password before saving
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email, firstName, lastName, password, role, academicLevel, userStatus):
+        """
+        Creates and returns a superuser with all the necessary flags set.
+        """
+        user = self.create_user(
+            username=username,
+            email=email,
+            firstName=firstName,
+            lastName=lastName,
+            password=password,
+            role=role,
+            academicLevel=academicLevel,
+            userStatus=userStatus
+        )
+        user.is_staff = True
+        user.is_superuser = True
+        user.save(using=self._db)
+        return user
+
+
+
+# Users Table
+# class User(models.Model):
+#     ROLE_CHOICES = [
+#         ('Teacher', 'Teacher'),
+#         ('Student', 'Student'),
+#         ('Parent', 'Parent'),
+#     ]
+
+#     user_id = models.AutoField(primary_key=True, db_column='user_id')
+#     full_name = models.CharField(max_length=255)
+#     email = models.EmailField(unique=True, blank=True, null=True)
+#     password_hash = models.CharField(max_length=255)
+#     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+#     created_at = models.DateTimeField(auto_now_add=True)
+
+#     class Meta:
+#         db_table = "users"
+
+#     def __str__(self):
+#         return self.full_name
+
+
+
+class User(models.Model):
+    username = models.CharField(max_length=100, unique=True)
+    email = models.EmailField()
+    firstName = models.CharField(max_length=100)
+    lastName = models.CharField(max_length=100)
+    fullName = models.CharField(max_length=255, blank=True, null=True)  # Add full_name field
+    password = models.CharField(max_length=100)
+    role = models.CharField(max_length=50)
+    academicLevel = models.TextField()  # Use TextField to store the academic levels as a string
+    userStatus = models.CharField(max_length=50)
+
+    objects = UserManager()  # Use the custom manager
 
     class Meta:
-        db_table = "users"
+        db_table = "user"
 
     def __str__(self):
-        return self.full_name
+        return self.username
 
 
 # Students Table

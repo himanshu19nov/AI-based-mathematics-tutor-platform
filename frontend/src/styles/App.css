@@ -1,0 +1,149 @@
+/* App.css */
+
+/* Layout for the entire app */
+.App {
+  display: flex;
+  flex-direction: column; /* Stack the welcome section on top */
+  background-color: #f4f4f4;
+}
+
+.login {
+  background-color: lightseagreen;  
+  color: white;
+  text-align: center;
+  padding: 100px;
+  height: 500px;
+  font-size: 25px;
+}
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centers the inputs and button */
+  justify-content: center;
+  width: 100%;
+}
+
+.login-input {
+  width: 100%; /* Makes inputs take the full width of the container */
+  max-width: 400px; /* Max width to control size */
+  padding: 12px 15px; /* Padding for better visual appeal */
+  margin: 10px 0; /* Vertical spacing between inputs */
+  font-size: 30px; /* Font size for the text */
+  line-height: 1.5; /* Consistent line height */
+  border: 1px solid #ccc; /* Border style */
+  border-radius: 5px; /* Rounded corners */
+  box-sizing: border-box; /* Ensures padding is part of the width */
+}
+
+.login-button{
+  width: 100%; /* Full width of container */
+  max-width: 200px; /* Match the max width of the input fields */
+  margin-top: 10px;
+  padding: 15px;
+  background-color: #516451; 
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 30px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.login-button:hover {
+  background-color: #45a049; /* Darker green when hovered */
+}
+
+/* Welcome Section */
+.welcome {
+  background-color: lightseagreen;  
+  color: white;
+  text-align: center;
+  padding: 0px;
+  height: 100px;
+}
+
+.welcome h1 {
+  margin: 0;
+}
+
+.welcome p {
+  margin: 5px 0;
+}
+
+/* Layout for the sidebar and main content */
+.content-container {
+  display: flex;
+  flex: 1;
+  margin-top: 0px; /* Add margin top to avoid overlap with the fixed welcome section */
+}
+
+
+/* Sidebar styles */
+.sidebar {
+  width: 150px; 
+  background-color: #f4f4f4;
+  color: white;
+  padding: 20px;
+  position: fixed;
+  top: 100px; /* Start the sidebar below the welcome div */
+  left: 0; /* Keep it on the left */
+  height: calc(100vh - 60px); /* Full height minus the height of the welcome section */
+  overflow: hidden;
+}
+
+
+.sidebar-button {
+  width: 100%;  
+  padding: 10px; 
+  background-color: lightseagreen; 
+  border: none; /* Remove button border */
+  color: white; 
+  text-align: left; 
+  font-size: 15px; 
+  margin: 20px 5px; /* Add space between buttons */
+  cursor: pointer; /* Pointer cursor for button */
+  border-radius: 20px; /* Rounded corners */
+}
+
+.sidebar-button:hover {
+  background-color: red; 
+}
+
+.sidebar-button:focus {
+  outline: none; /* Remove focus outline */
+}
+
+.sidebar-button.active {
+  background-color: red;  
+}
+
+
+.logout-button {
+  position: absolute;
+  top: 10px;
+  right: 20px; 
+  background-color: rgb(200, 100, 100);
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  margin: 20px 5px;
+  font-size: 16px;
+  border-radius: 20px;
+}
+
+
+/* Main content area */
+.main-content {
+  margin-left: 150px; /* Offset the content to the right of the sidebar */
+  padding: 0 20px;
+  width: calc(100% - 150px); /* Ensure main content takes up remaining width */
+  background-color: #f4f4f4; 
+}
+
+
+.main-content div {
+  background-color: #f4f4f4; 
+  padding: 0px;
+}

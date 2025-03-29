@@ -1,0 +1,118 @@
+/* src/ConductQuiz.css */
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f4f4f4;
+  overflow-y: auto;
+}
+
+.button-container {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: darkorange;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.button:hover {
+  background-color: red;
+}
+
+.form-container {
+  margin-top: 30px;
+  width: 80%;
+  max-width: 800px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-grid {
+  display: grid;
+  /* grid-template-columns: 1fr 1fr; */
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-bottom: 100px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+
+}
+
+label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  
+}
+
+select {
+  padding: 8px;
+  font-size: 16px;
+  width: 20%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+input {
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+input[type="file"] {
+  margin-top: 10px;
+}
+
+input[type="text"] {
+  width: 500px;  /* You can adjust this value as per your requirement */
+  padding: 10px; /* Optional: adds padding for better spacing inside the input field */
+}
+
+textarea {
+  padding: 8px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 80%;
+  resize: vertical; /* Optional to allow vertical resizing */
+  min-height: 120px; /* Ensures a minimum height for the textarea */
+}
+
+.button-group {
+  display: flex;
+  gap: 10px; /* Optional: adds space between the buttons */
+  justify-content: flex-start; /* Aligns buttons to the left (default behavior) */
+  align-items: center; /* Centers buttons vertically if needed */
+}
+
+.add-button {
+  width: 50%;
+  font-size: 15px;
+}
+
+.scrollable-list {
+  max-height: 300px; /* Adjust height to accommodate 10 rows */
+  overflow-y: auto;  /* Enable vertical scrolling */
+  border: 1px solid #ccc; /* Optional: Adds a border around the scrollable area */
+  padding: 5px;
+}
+
+.scrollable-list li {
+  height: 30px; /* Adjust based on your preferred row height */
+}
