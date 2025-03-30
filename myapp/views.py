@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import User  # assuming custom User model maps to `Users` table
 from .serializers import UserLoginSerializer
 from .serializers import QuestionCreateSerializer
+from django.contrib.auth.hashers import check_password
 
 
 def user_registration(request):
@@ -74,26 +75,24 @@ def update_user(request, user_id):
 
 @api_view(['POST'])
 def user_login(request):
-    serializer = UserLoginSerializer(data=request.data)
-
-    if serializer.is_valid():
-        email = serializer.validated_data['email']
-        password = serializer.validated_data['password']
-
-        hashed_pw = hashlib.sha256(password.encode()).hexdigest()
-
-        try:
-            user = User.objects.get(email=email, password_hash=hashed_pw)
+    email = request.data.get('email')
+    password = request.data.get('password')
+    #hashed_pw = hashlib.sha256(password.encode()).hexdigest()
+    try:
+        user = User.objects.get(email=email)
+        if check_password(password, user.password):
             return Response({
                 'message': 'Login successful',
-                'user_id': user.user_id,
+                'username': user.username,
                 'role': user.role,
-                'full_name': user.full_name
+                'status': user.userStatus
             }, status=status.HTTP_200_OK)
-        except User.DoesNotExist:
-            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
-    else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
 @api_view(['POST'])
 def create_question(request):
     serializer = QuestionCreateSerializer(data=request.data)
