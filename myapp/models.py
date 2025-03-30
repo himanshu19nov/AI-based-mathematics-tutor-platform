@@ -3,6 +3,7 @@ from django.db import models
 
 
 
+
 class UserManager(models.Manager):
     def create_user(self, username, email, firstName, lastName, password, role, academicLevel, userStatus):
         """
@@ -91,186 +92,190 @@ class User(models.Model):
 
 
 # Students Table
+# -------------------------
+# Students Table
+# -------------------------
 class Student(models.Model):
-    student = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name="student_profile")
-    parent = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="children")
+    student_id = models.IntegerField(primary_key=True)
+    parent_id = models.IntegerField(null=True)
     grade_level = models.CharField(max_length=50)
 
     class Meta:
-        db_table = "students"
-
-    def __str__(self):
-        return f"{self.student.full_name if self.student else 'Unknown'} - {self.grade_level}"
+        db_table = 'Students'
+        managed = False
 
 
+# -------------------------
 # Teachers Table
+# -------------------------
 class Teacher(models.Model):
-    teacher = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    teacher_id = models.IntegerField(primary_key=True)
     subject = models.CharField(max_length=100)
     experience = models.IntegerField()
 
     class Meta:
-        db_table = "teachers"
-
-    def __str__(self):
-        return f"{self.teacher.full_name} - {self.subject}"
+        db_table = 'Teachers'
+        managed = False
 
 
+# -------------------------
 # Questions Table
+# -------------------------
 class Question(models.Model):
-    CATEGORY_CHOICES = [
+    question_id = models.AutoField(primary_key=True)
+    teacher_id = models.IntegerField()
+    category = models.CharField(max_length=50, choices=[
         ('Arithmetic', 'Arithmetic'),
         ('Trigonometry', 'Trigonometry'),
         ('Algebra', 'Algebra'),
         ('Geometry', 'Geometry'),
-        ('Calculus', 'Calculus'),
-    ]
-
-    DIFFICULTY_CHOICES = [
-        ('Easy', 'Easy'),
-        ('Medium', 'Medium'),
-        ('Hard', 'Hard'),
-    ]
-    question_id = models.AutoField(primary_key=True, db_column='question_id')
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+        ('Calculus', 'Calculus')
+    ])
     question_text = models.TextField()
     correct_answer = models.CharField(max_length=255)
-    difficulty_level = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES)
+    difficulty_level = models.CharField(max_length=10, choices=[
+        ('Easy', 'Easy'),
+        ('Medium', 'Medium'),
+        ('Hard', 'Hard')
+    ])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "questions"
-
-    def __str__(self):
-        return f"{self.category} - {self.difficulty_level}"
+        db_table = 'Questions'
+        managed = False
 
 
+# -------------------------
 # Quiz Table
+# -------------------------
 class Quiz(models.Model):
-    quiz_id = models.AutoField(primary_key=True, db_column='quiz_id')
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
+    quiz_id = models.AutoField(primary_key=True)
+    teacher_id = models.IntegerField()
     quiz_title = models.CharField(max_length=255)
-    total_marks = models.PositiveIntegerField()
+    total_marks = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "quiz"
-
-    def __str__(self):
-        return self.quiz_title
+        db_table = 'quiz'
+        managed = False
 
 
-# Quiz_Questions Table (Mapping Table)
+# -------------------------
+# Quiz_Questions Table
+# -------------------------
+class QuizQuestion(models.Model):
+    quiz_id = models.IntegerField()
+    question_id = models.IntegerField()
+
+    class Meta:
+        db_table = 'Quiz_Questions'
+        managed = False
+        unique_together = ('quiz_id', 'question_id')
 
 
-
+# -------------------------
 # Student_Exams Table
+# -------------------------
 class StudentExam(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    student_exam_id = models.AutoField(primary_key=True)
+    student_id = models.IntegerField()
+    quiz_id = models.IntegerField()
     score = models.IntegerField(default=0)
     taken_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "student_exams"
-
-    def __str__(self):
-        return f"{self.student.student.full_name if self.student else 'Unknown'} - {self.quiz.quiz_title}"
+        db_table = 'Student_Exams'
+        managed = False
 
 
+# -------------------------
 # Answers Table
+# -------------------------
 class Answer(models.Model):
-    student_exam = models.ForeignKey(StudentExam, on_delete=models.CASCADE)
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    answer_id = models.AutoField(primary_key=True)
+    student_exam_id = models.IntegerField()
+    question_id = models.IntegerField()
     student_answer = models.CharField(max_length=255)
     is_correct = models.BooleanField(default=False)
 
     class Meta:
-        db_table = "answers"
-
-    def __str__(self):
-        return f"{self.student_exam.student.student.full_name if self.student_exam.student else 'Unknown'} - {self.question.category}"
+        db_table = 'Answers'
+        managed = False
 
 
-# AI_Analysis Table
+# -------------------------
+# AI Analysis Table
+# -------------------------
 class AIAnalysis(models.Model):
-    CATEGORY_CHOICES = [
+    analysis_id = models.AutoField(primary_key=True)
+    student_exam_id = models.IntegerField()
+    category = models.CharField(max_length=50, choices=[
         ('Arithmetic', 'Arithmetic'),
         ('Trigonometry', 'Trigonometry'),
         ('Algebra', 'Algebra'),
         ('Geometry', 'Geometry'),
-        ('Calculus', 'Calculus'),
-    ]
-
-    student_exam = models.ForeignKey(StudentExam, on_delete=models.CASCADE)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+        ('Calculus', 'Calculus')
+    ])
     score_percentage = models.FloatField(default=0.0)
-    improvement_tips = models.TextField()
+    improvement_tips = models.TextField(null=True)
 
     class Meta:
-        db_table = "ai_analysis"
-
-    def __str__(self):
-        return f"{self.student_exam.student.student.full_name if self.student_exam.student else 'Unknown'} - {self.category}"
+        db_table = 'AI_Analysis'
+        managed = False
 
 
+# -------------------------
 # Parent_Student_Mapping Table
+# -------------------------
 class ParentStudentMapping(models.Model):
-    parent = models.ForeignKey(User, on_delete=models.CASCADE, related_name="student_children")
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="parent_mappings")
+    parent_id = models.IntegerField()
+    student_id = models.IntegerField()
 
     class Meta:
-        db_table = "parent_student_mapping"
-        unique_together = ('parent', 'student')
-
-    def __str__(self):
-        return f"{self.parent.full_name} - {self.student.student.full_name if self.student else 'Unknown'}"
+        db_table = 'Parent_Student_Mapping'
+        managed = False
+        unique_together = ('parent_id', 'student_id')
 
 
+# -------------------------
 # Doubts Table
+# -------------------------
 class Doubt(models.Model):
-    STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Answered', 'Answered'),
-    ]
-
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    doubt_id = models.AutoField(primary_key=True)
+    student_id = models.IntegerField()
     question_text = models.TextField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
+    status = models.CharField(max_length=10, default='Pending', choices=[
+        ('Pending', 'Pending'),
+        ('Answered', 'Answered')
+    ])
     ai_response = models.TextField(null=True, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "doubts"
-
-    def __str__(self):
-        return f"{self.student.student.full_name if self.student else 'Unknown'} - {self.status}"
+        db_table = 'Doubts'
+        managed = False
 
 
-# Quiz System Table
-class QuizSystem(models.Model):
-    CATEGORY_CHOICES = [
+# -------------------------
+# Quizzes Table (AI Generated)
+# -------------------------
+class AIQuiz(models.Model):
+    quiz_id = models.AutoField(primary_key=True)
+    category = models.CharField(max_length=50, choices=[
         ('Arithmetic', 'Arithmetic'),
         ('Trigonometry', 'Trigonometry'),
         ('Algebra', 'Algebra'),
         ('Geometry', 'Geometry'),
-        ('Calculus', 'Calculus'),
-    ]
-
-    DIFFICULTY_CHOICES = [
+        ('Calculus', 'Calculus')
+    ])
+    difficulty = models.CharField(max_length=10, choices=[
         ('Easy', 'Easy'),
         ('Medium', 'Medium'),
-        ('Hard', 'Hard'),
-    ]
-
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES)
+        ('Hard', 'Hard')
+    ])
     ai_generated = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "quiz_system"
-
-    def __str__(self):
-        return f"{self.category} - {self.difficulty}"
+        db_table = 'Quizzes'
+        managed = False

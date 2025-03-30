@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import User
+from .models import Question
+from rest_framework import serializers
 
 
 class UserSignupSerializer(serializers.ModelSerializer):
@@ -11,6 +13,7 @@ class UserSignupSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True)     # Include email field
     academicLevel = serializers.ListField(child=serializers.CharField(), write_only=True)  # Expect a list of academic levels 
     userStatus = serializers.CharField(write_only=True)    # Add userStatus field
+    from .models import Question
 
     class Meta:
         model = User
@@ -44,4 +47,26 @@ class UserSignupSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)  # Automatically hashes password
         user.save()
 
-        return user    
+        return user
+
+
+class UserLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+class QuestionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = ['teacher_id', 'category', 'question_text', 'correct_answer', 'difficulty_level']
+
+    def validate_category(self, value):
+        valid = ['Arithmetic', 'Trigonometry', 'Algebra', 'Geometry', 'Calculus']
+        if value not in valid:
+            raise serializers.ValidationError("Invalid category.")
+        return value
+
+    def validate_difficulty_level(self, value):
+        valid = ['Easy', 'Medium', 'Hard']
+        if value not in valid:
+            raise serializers.ValidationError("Invalid difficulty level.")
+        return value
