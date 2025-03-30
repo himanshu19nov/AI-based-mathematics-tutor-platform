@@ -10,4 +10,6 @@ urlpatterns = [
     path('api/user/<int:user_id>/delete/', views.delete_user, name='delete_user'),
     path('api/login/', views.user_login, name='user_login'),
     path('api/create_question/', create_question, name='create_question'),
+    path('api/users/', views.list_all_users, name='list_all_users'),
+
 ]
