@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import User  # assuming custom User model maps to `Users` table
 from .serializers import UserLoginSerializer
 from .serializers import QuestionCreateSerializer
+from django.contrib.auth.hashers import check_password
 
 
 def user_registration(request):
@@ -51,18 +52,33 @@ def delete_user(request, user_id):
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth.hashers import make_password
+from .models import User
+
 @api_view(['PUT'])
 def update_user(request, user_id):
     try:
-        user = User.objects.get(user_id=user_id)
+        user = User.objects.get(id=user_id)
         data = request.data
 
-        # Update user fields
-        user.full_name = data.get('full_name', user.full_name)
+        # Update fields if present in the request
+        user.username = data.get('username', user.username)
         user.email = data.get('email', user.email)
-        if 'password' in data:
-            user.password_hash = data['password']  # You might want to hash it before saving
+        user.firstName = data.get('firstName', user.firstName)
+        user.lastName = data.get('lastName', user.lastName)
+
+        # Update fullName automatically if first/last changed
+        user.fullName = f"{user.firstName} {user.lastName}"
+
+        if 'password' in data and data['password']:
+            user.password = make_password(data['password'])
+
         user.role = data.get('role', user.role)
+        user.academicLevel = data.get('academicLevel', user.academicLevel)
+        user.userStatus = data.get('userStatus', user.userStatus)
 
         user.save()
 
@@ -72,28 +88,27 @@ def update_user(request, user_id):
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
+
 @api_view(['POST'])
 def user_login(request):
-    serializer = UserLoginSerializer(data=request.data)
-
-    if serializer.is_valid():
-        email = serializer.validated_data['email']
-        password = serializer.validated_data['password']
-
-        hashed_pw = hashlib.sha256(password.encode()).hexdigest()
-
-        try:
-            user = User.objects.get(email=email, password_hash=hashed_pw)
+    email = request.data.get('email')
+    password = request.data.get('password')
+    #hashed_pw = hashlib.sha256(password.encode()).hexdigest()
+    try:
+        user = User.objects.get(email=email)
+        if check_password(password, user.password):
             return Response({
                 'message': 'Login successful',
-                'user_id': user.user_id,
+                'username': user.username,
                 'role': user.role,
-                'full_name': user.full_name
+                'status': user.userStatus
             }, status=status.HTTP_200_OK)
-        except User.DoesNotExist:
-            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
-    else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
 @api_view(['POST'])
 def create_question(request):
     serializer = QuestionCreateSerializer(data=request.data)
@@ -101,3 +116,24 @@ def create_question(request):
         serializer.save()
         return Response({'message': 'Question created successfully!'}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def list_all_users(request):
+    users = User.objects.all()
+    user_list = []
+
+    for user in users:
+        user_list.append({
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "firstName": user.firstName,
+            "lastName": user.lastName,
+            "fullName": user.fullName,
+            "role": user.role,
+            "academicLevel": user.academicLevel,
+            "userStatus": user.userStatus
+        })
+
+    return Response(user_list)

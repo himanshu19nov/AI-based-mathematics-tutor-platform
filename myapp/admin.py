@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Student, Teacher, Question, Quiz, StudentExam, Answer, AIAnalysis, ParentStudentMapping, Doubt, QuizSystem
+from .models import User, Student, Teacher, Question, Quiz, StudentExam, Answer, AIAnalysis, ParentStudentMapping, Doubt
 
 admin.site.register(User)
 admin.site.register(Student)
@@ -11,4 +11,4 @@ admin.site.register(Answer)
 admin.site.register(AIAnalysis)
 admin.site.register(ParentStudentMapping)
 admin.site.register(Doubt)
-admin.site.register(QuizSystem)
+
