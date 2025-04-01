@@ -11,5 +11,6 @@ urlpatterns = [
     path('api/login/', views.user_login, name='user_login'),
     path('api/create_question/', create_question, name='create_question'),
     path('api/users/', views.list_all_users, name='list_all_users'),
-
+    path('api/list_questions/', views.list_questions),
+    path('api/search_questions/', views.search_questions),
 ]

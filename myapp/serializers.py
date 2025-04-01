@@ -70,3 +70,8 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         if value not in valid:
             raise serializers.ValidationError("Invalid difficulty level.")
         return value
+
+class QuestionListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = '__all__'  # or list only specific fields

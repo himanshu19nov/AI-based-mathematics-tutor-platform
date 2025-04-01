@@ -15,6 +15,8 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import User  # assuming custom User model maps to `Users` table
 from .serializers import UserLoginSerializer
 from .serializers import QuestionCreateSerializer
+from .serializers import QuestionListSerializer
+from .models import Question
 from django.contrib.auth.hashers import check_password
 
 
@@ -45,7 +47,7 @@ def user_signup(request):
 @api_view(['DELETE'])
 def delete_user(request, user_id):
     try:
-        user = User.objects.get(user_id=user_id)
+        user = User.objects.get(id=user_id)
         user.delete()
         return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except User.DoesNotExist:
@@ -137,3 +139,29 @@ def list_all_users(request):
         })
 
     return Response(user_list)
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
+@api_view(['GET'])
+def list_questions(request):
+    questions = Question.objects.all()
+    serializer = QuestionListSerializer(questions, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def search_questions(request):
+    questions = Question.objects.all()
+
+    category = request.GET.get('category')
+    difficulty = request.GET.get('difficulty_level')
+
+    if category:
+        questions = questions.filter(category__iexact=category)
+    if difficulty:
+        questions = questions.filter(difficulty_level__iexact=difficulty)
+
+    serializer = QuestionCreateSerializer(questions, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
