@@ -1,0 +1,41 @@
+Sign up - http://127.0.0.1:8000/api/user/create/
+{"username":"LJ35","email":"Russ35@gmail.com","firstName":"Luke","lastName":"James","password":"hash234","role":"Teacher","academicLevel":[],"userStatus":"enable"}
+
+
+Login - http://127.0.0.1:8000/api/login/
+{"email":"Russ35@gmail.com",
+"password":"hash123"}
+
+Create Question - http://127.0.0.1:8000/api/create_question/
+{
+  "teacher_id": 3,
+  "category": "Geometry",
+  "question_text": "What is the value of x in the equation 2x + 3 = 7?",
+  "correct_answer": "2",
+  "difficulty_level": "Easy"
+}
+
+Update user -  http://127.0.0.1:8000/api/user/1/update/
+{
+  "username": "updatedUser",
+  "email": "johnupdate.student22@school.edu",
+  "firstName": "Updated",
+  "lastName": "User",
+  "password": "updatedPass45678",
+  "role": "student",
+  "academicLevel": "Kindergarten, Year 1, Year 2",
+  "userStatus": "disabled"
+}
+
+
+Delete user - http://127.0.0.1:8000/api/user/1/delete/
+Request body not needed
+
+List all users - http://127.0.0.1:8000/api/users/
+Request body not needed
+
+List all questions - http://localhost:8000/api/list_questions/
+Request body not needed
+
+http://localhost:8000/api/search_questions/?category=Geometry
+Request body not needed, parameter needed in URL
