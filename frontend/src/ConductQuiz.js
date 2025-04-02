@@ -7,12 +7,13 @@ const App = () => {
   const [showForm, setShowForm] = useState(false);
   const [showQuizSetup, setShowQuizSetup] = useState(false);
   const [formData, setFormData] = useState({
-    questionLevel: '',
-    questionInput: '',
-    questionCategory: '',
+    username: 'HARDCODED-username',
+    difficulty_level: '',
+    category: '',
+    question_text: '',  
     ansType: '',  // Initialize ansType as an empty string
     answers: Array(3).fill(''),  // Create an array to hold answers for 10 fields
-    correctAnswer: '',
+    correct_answer: '',
   });
 
   const handleInputChange = (e) => {
@@ -48,18 +49,18 @@ const App = () => {
   const handleResetAll = () => {
     // Reset all fields to their initial empty states
     setFormData({
-      questionLevel: '',
-      questionInput: '',
-      questionCategory: '',
+      difficulty_level: '',
+      question_text: '',
+      category: '',
       answerType: '',  // Reset answerType
       answers: Array(3).fill(''),  // Reset answers array to empty strings
-      correctAnswer: '',
+      correct_answer: '',
     });
   };
 
   const handleSubmit = async () => {
     try {
-      const response = await axios.post('http://localhost:8000/api/create_question', formData);
+      const response = await axios.post('http://localhost:8000/api/create_question/', formData);
       console.log('Backend Response:', response.data);
       alert('Form submitted successfully!');
     } catch (error) {
@@ -70,12 +71,12 @@ const App = () => {
 
   const handleAIGenerate = () => {
     const generatedData = {
-      questionLevel: 'year_2',
-      questionInput: 'What shape has 4 sides and all sides are the same length?',
-      questionCategory: 'geometry',
+      difficulty_level: 'year_2',
+      question_text: 'What shape has 4 sides and all sides are the same length?',
+      category: 'Geometry',
       ansType: 'single_choice',
       answers: ['Rectangle', 'Triangle', 'Circle', 'Square', '', '','','', '',''], 
-      correctAnswer: 'Square',
+      correct_answer: 'Square',
     };
     setFormData(generatedData);
   };
@@ -96,11 +97,11 @@ const App = () => {
           <div className="form-grid">
             {/* Question Level */}
             <div className="form-row">
-              <label htmlFor="questionLevel">Question Level</label>
+              <label htmlFor="difficulty_level">Question Level</label>
               <select
-                id="questionLevel"
-                name="questionLevel"
-                value={formData.questionLevel}
+                id="difficulty_level"
+                name="difficulty_level"
+                value={formData.difficulty_level}
                 onChange={handleInputChange}
               >
                 <option value="">Select Level</option>
@@ -122,11 +123,11 @@ const App = () => {
 
             {/* Question Input */}
             <div className="form-row">
-              <label htmlFor="questionInput">Question Input</label>
+              <label htmlFor="question_text">Question Input</label>
               <textarea
-                id="questionInput"
-                name="questionInput"
-                value={formData.questionInput}
+                id="question_text"
+                name="question_text"
+                value={formData.question_text}
                 onChange={handleInputChange}
                 placeholder="Please type question here"
                 rows="5"
@@ -141,9 +142,9 @@ const App = () => {
                 <label>
                   <input
                     type="radio"
-                    name="questionCategory"
-                    value="trigonometry"
-                    checked={formData.questionCategory === 'trigonometry'}
+                    name="category"
+                    value="Trigonometry"
+                    checked={formData.category === 'Trigonometry'}
                     onChange={handleInputChange}
                   />
                   Trigonometry
@@ -151,9 +152,9 @@ const App = () => {
                 <label>
                   <input
                     type="radio"
-                    name="questionCategory"
-                    value="arithmetic"
-                    checked={formData.questionCategory === 'arithmetic'}
+                    name="category"
+                    value="Arithmetic"
+                    checked={formData.category === 'Arithmetic'}
                     onChange={handleInputChange}
                   />
                   Arithmetic
@@ -161,9 +162,9 @@ const App = () => {
                 <label>
                   <input
                     type="radio"
-                    name="questionCategory"
-                    value="geometry"
-                    checked={formData.questionCategory === 'geometry'}
+                    name="category"
+                    value="Geometry"
+                    checked={formData.category === 'Geometry'}
                     onChange={handleInputChange}
                   />
                   Geometry
@@ -171,9 +172,9 @@ const App = () => {
                 <label>
                   <input
                     type="radio"
-                    name="questionCategory"
-                    value="algebra"
-                    checked={formData.questionCategory === 'algebra'}
+                    name="category"
+                    value="Algebra"
+                    checked={formData.category === 'Algebra'}
                     onChange={handleInputChange}
                   />
                   Algebra
@@ -181,9 +182,9 @@ const App = () => {
                 <label>
                   <input
                     type="radio"
-                    name="questionCategory"
-                    value="calculus"
-                    checked={formData.questionCategory === 'calculus'}
+                    name="category"
+                    value="Calculus"
+                    checked={formData.category === 'Calculus'}
                     onChange={handleInputChange}
                   />
                   Calculus
@@ -250,11 +251,11 @@ const App = () => {
 
             {/* Correct Answer Input */}
             <div className="form-row">
-              <label htmlFor="correctAnswer">Correct Answer</label>
+              <label htmlFor="correct_answer">Correct Answer</label>
               <textarea
-                id="correctAnswer"
-                name="correctAnswer"
-                value={formData.questionInput}
+                id="correct_answer"
+                name="correct_answer"
+                value={formData.correct_answer}
                 onChange={handleInputChange}
                 placeholder="Please type correct answer here"
                 rows="3"

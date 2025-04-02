@@ -9,8 +9,10 @@ const Login = ({ setIsAuthenticated }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate(); // Using useNavigate instead of useHistory
 
-  
-  const handleLogin = () => {
+  /*
+  const handleLogin = (event) => {
+    event.preventDefault(); // Prevent page reload on form submission
+
     // Add your authentication logic here
     if (username === 'user' && password === 'password') {
       setIsAuthenticated(true);
@@ -19,10 +21,11 @@ const Login = ({ setIsAuthenticated }) => {
       alert('Invalid username or password');
     }
   };
-  
+  */
 
-/*
-  const handleLogin = async () => {
+
+  const handleLogin = async (event) => {
+    event.preventDefault(); // Prevent page reload on form submission
     try {
       const response = await fetch('http://127.0.0.1:8000/api/login/', {
         method: 'POST',
@@ -41,6 +44,10 @@ const Login = ({ setIsAuthenticated }) => {
         // Set authenticated state
         setIsAuthenticated(true);
 
+        // Clear the form fields
+        setUsername('');
+        setPassword('');
+
         // Redirect to the platform page
         navigate('/platform');
       } else {
@@ -52,15 +59,18 @@ const Login = ({ setIsAuthenticated }) => {
     }
   };
 
-*/
+
 
 
 
   return (
-    <div className="login">
-      <h2>Login </h2>
+    <div className="login">      
+          <img src="/logo.jpg" alt="Login Image" style={{ width: '100px', height: 'auto', objectFit: 'contain' }} />
+        
+      <h2>Login to Mathematics Tutuoring Service (MTS) Platform </h2>
       {errorMessage && <div className="error-message">{errorMessage}</div>}
       <div className="login-container">
+        <form onSubmit={handleLogin}>
         <div >
           <input className="login-input"
           type="text"
@@ -79,6 +89,7 @@ const Login = ({ setIsAuthenticated }) => {
           />
         </div>
           <button className="login-button" onClick={handleLogin}>Login</button>
+          </form>
       </div>
     </div>
   );
