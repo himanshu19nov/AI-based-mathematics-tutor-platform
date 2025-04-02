@@ -18,6 +18,7 @@ from .serializers import QuestionCreateSerializer
 from .serializers import QuestionListSerializer
 from .models import Question
 from django.contrib.auth.hashers import check_password
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 def user_registration(request):
@@ -93,22 +94,31 @@ def update_user(request, user_id):
 
 @api_view(['POST'])
 def user_login(request):
-    email = request.data.get('email')
+    # email = request.data.get('email')
+    username = request.data.get('username')
     password = request.data.get('password')
     #hashed_pw = hashlib.sha256(password.encode()).hexdigest()
     try:
-        user = User.objects.get(email=email)
+        # user = User.objects.get(email=email)
+        user = User.objects.get(username=username)
         if check_password(password, user.password):
+            
+            # Generate JWT token on successful login
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            
             return Response({
                 'message': 'Login successful',
                 'username': user.username,
                 'role': user.role,
-                'status': user.userStatus
+                'status': user.userStatus,
+                'token': access_token
             }, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 @api_view(['POST'])

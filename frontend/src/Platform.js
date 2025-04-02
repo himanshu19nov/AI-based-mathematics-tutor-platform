@@ -1,25 +1,38 @@
 import './styles/App.css';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ConductQuiz from './ConductQuiz';  // No need for '.js' extension
-import AIChatbox from './AIChatbox';  // No need for '.js' extension
-import UserRegistration from './UserRegistration';  // Correct path to UserRegistration.js
-import AttendQuiz from './AttendQuiz';  // Add AttendQuiz import
+import ConductQuiz from './ConductQuiz';  
+import AIChatbox from './AIChatbox';  
+import UserRegistration from './UserRegistration';  
+import AttendQuiz from './AttendQuiz';  
 import EvaluateQuiz from './EvaluateQuiz';
 import ViewResult from './ViewResult';
 
 function App() {
   const [selectedOption, setSelectedOption] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(true);  // Assuming user is logged in initially
+  const [isAuthenticated, setIsAuthenticated] = useState(null);  
+  const [loading, setLoading] = useState(true);  // Add a loading state
   const navigate = useNavigate();  // Initialize the navigate function to redirect
 
-  const token = sessionStorage.getItem('token');
-  // if (token) {
-  //   setIsAuthenticated(true);
-  // } else {
-  //   setIsAuthenticated(false);
-  // }
+  useEffect(() => {
+    // Check if token exists in sessionStorage when component mounts
+    const token = sessionStorage.getItem('token');
+    console.log('Token in sessionStorage:', token);  // Log the token for debugging
+    if (token) {
+      setIsAuthenticated(true);
+    } else {
+      setIsAuthenticated(false);
+    }
+    setLoading(false);  // Once the check is complete, stop loading
+  }, []); // Empty dependency array ensures this runs once on mount
 
+  useEffect(() => {
+    if (loading) return; // Prevent navigation until loading state is false
+
+    if (!isAuthenticated) {
+      navigate('/');  // Redirect to the login page if not authenticated
+    }
+  }, [isAuthenticated, loading, navigate]);  // Watch for changes in `isAuthenticated` and `loading`
 
   const handleMenuClick = (option) => {
     setSelectedOption(option);
@@ -32,9 +45,13 @@ function App() {
     navigate('/');                // Redirect to login page
   };
 
+  if (loading) {
+    return <div>Loading...</div>;  // Show a loading message while checking the token
+  }
+
+  // Now that loading is done, only show content if authenticated
   if (!isAuthenticated) {
-      //alert('You have been logged out. Please log in to access the platform.');
-      navigate('/');
+    return <div>Redirecting...</div>;  // Show redirecting message (or use a loader) if not authenticated
   }
 
   return (
@@ -42,7 +59,7 @@ function App() {
 
       {/* Welcome Section */}
       <div className="welcome">
-        <h1>Welcome to The Collaborative Intelligence Mathematics Tutoring Service Platform!</h1>
+        <h1>Welcome to MTS Platform!</h1>
         <p>Choose a function from the sidebar to get started.</p>
         <button className="logout-button" onClick={handleLogout}>Logout</button>
       </div>
@@ -61,11 +78,14 @@ function App() {
         <div className="main-content">
           {selectedOption === 'userRegistration' && <UserRegistration />}
           {selectedOption === 'conductQuiz' && <ConductQuiz />}
-          {selectedOption === 'attendQuiz' && <AttendQuiz />}  {/* Added AttendQuiz */}
+          {selectedOption === 'attendQuiz' && <AttendQuiz />}  
           {selectedOption === 'evaluateQuiz' && <EvaluateQuiz />}
           {selectedOption === 'chatbox' && <AIChatbox />}
           {selectedOption === 'viewResult' && <ViewResult />}
-        </div>
+        </div> 
+
+
+
 
       </div>
 

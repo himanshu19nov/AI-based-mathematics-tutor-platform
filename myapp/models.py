@@ -123,7 +123,7 @@ class Teacher(models.Model):
 # -------------------------
 class Question(models.Model):
     question_id = models.AutoField(primary_key=True)
-    teacher_id = models.IntegerField()
+    username = models.CharField(max_length=50)
     category = models.CharField(max_length=50, choices=[
         ('Arithmetic', 'Arithmetic'),
         ('Trigonometry', 'Trigonometry'),
@@ -132,17 +132,32 @@ class Question(models.Model):
         ('Calculus', 'Calculus')
     ])
     question_text = models.TextField()
+    ansType = models.TextField()
+    answers = models.TextField()
     correct_answer = models.CharField(max_length=255)
-    difficulty_level = models.CharField(max_length=10, choices=[
-        ('Easy', 'Easy'),
-        ('Medium', 'Medium'),
-        ('Hard', 'Hard')
+    difficulty_level = models.CharField(max_length=13, choices=[
+        # ('Easy', 'Easy'),
+        # ('Medium', 'Medium'),
+        # ('Hard', 'Hard')
+        ('kindergartens', 'kindergartens'),
+        ('year_1', 'year_1'),
+        ('year_2', 'year_2'),
+        ('year_3', 'year_3'),
+        ('year_4', 'year_4'),
+        ('year_5', 'year_5'),
+        ('year_6', 'year_6'),
+        ('year_7', 'year_7'),
+        ('year_8', 'year_8'),
+        ('year_9', 'year_9'),
+        ('year_10', 'year_10'),
+        ('year_11', 'year_11'),
+        ('year_12', 'year_12')    
     ])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'questions'
-        managed = False
+        # managed = False
 
 
 # -------------------------

@@ -55,10 +55,20 @@ class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
 class QuestionCreateSerializer(serializers.ModelSerializer):
+
+
+    ansType = serializers.CharField(required=True)  # Assuming ansType is a string; adjust if necessary
+    answers = serializers.ListField(
+        child=serializers.CharField(allow_blank=True), 
+        required=False,
+        allow_empty=True, 
+    )
     class Meta:
         model = Question
-        fields = ['teacher_id', 'category', 'question_text', 'correct_answer', 'difficulty_level']
+        # fields = ['teacher_id', 'category', 'question_text', 'correct_answer', 'difficulty_level']
+        fields = ['username', 'difficulty_level', 'category', 'question_text', 'ansType', 'answers', 'correct_answer']
 
+        
     def validate_category(self, value):
         valid = ['Arithmetic', 'Trigonometry', 'Algebra', 'Geometry', 'Calculus']
         if value not in valid:
@@ -66,7 +76,9 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate_difficulty_level(self, value):
-        valid = ['Easy', 'Medium', 'Hard']
+        valid = ['kindergartens', 'year_1', 'year_2','year_3', 'year_4',
+                 'year_5', 'year_6','year_7', 'year_8','year_9', 'year_10',
+                 'year_11', 'year_12']
         if value not in valid:
             raise serializers.ValidationError("Invalid difficulty level.")
         return value
