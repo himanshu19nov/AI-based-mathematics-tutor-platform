@@ -19,6 +19,15 @@ from .serializers import QuestionListSerializer
 from .models import Question
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import User, Quiz, QuizQuestion
+from django.db import connection
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Question
 
 
 def user_registration(request):
@@ -174,4 +183,70 @@ def search_questions(request):
 
     serializer = QuestionCreateSerializer(questions, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+@api_view(['POST'])
+def create_quiz(request):
+    data = request.data
+    username = data.get("username")
+    quiz_title = data.get("quizName")
+    selected_questions = data.get("selectedQuestions", [])
 
+    if not username or not quiz_title or not selected_questions:
+        return Response({"error": "Missing required fields"}, status=400)
+
+    try:
+        user = User.objects.get(username=username)
+        teacher_id = user.id  # Grab teacher's user ID
+
+        total_marks = sum(q["score"] for q in selected_questions)
+
+        # Manually insert into quiz table (managed = False)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO quiz (teacher_id, quiz_title, total_marks, created_at) VALUES (%s, %s, %s, NOW()) RETURNING quiz_id",
+                [teacher_id, quiz_title, total_marks]
+            )
+            quiz_id = cursor.fetchone()[0]
+
+            for q in selected_questions:
+                question_id = q["questionId"]
+                cursor.execute(
+                    "INSERT INTO Quiz_Questions (quiz_id, question_id) VALUES (%s, %s)",
+                    [quiz_id, question_id]
+                )
+
+        return Response({"message": "Quiz created successfully!", "quiz_id": quiz_id}, status=201)
+
+    except User.DoesNotExist:
+        return Response({"error": "Invalid username"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+@api_view(['PUT'])
+def update_question(request, question_id):
+    try:
+        question = Question.objects.get(question_id=question_id)
+    except Question.DoesNotExist:
+        return Response({'error': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    data = request.data
+    question.question_text = data.get('text', question.question_text)
+    question.difficulty_level = data.get('level', question.difficulty_level)
+    question.category = data.get('category', question.category)
+    question.correct_answer = data.get('correctAnswer', question.correct_answer)
+
+    try:
+        question.save()
+        return Response({'message': 'Question updated successfully'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+def delete_question(request, question_id):
+    try:
+        question = Question.objects.get(question_id=question_id)
+        question.delete()
+        return Response({'message': 'Question deleted successfully'}, status=status.HTTP_200_OK)
+    except Question.DoesNotExist:
+        return Response({'error': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

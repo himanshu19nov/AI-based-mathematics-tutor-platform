@@ -1,6 +1,10 @@
 from django.urls import path
 from . import views
 from .views import create_question
+from .views import create_quiz
+from .views import update_question
+from .views import delete_question
+
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -13,4 +17,9 @@ urlpatterns = [
     path('api/users/', views.list_all_users, name='list_all_users'),
     path('api/list_questions/', views.list_questions),
     path('api/search_questions/', views.search_questions),
+    path('api/create_quiz/', create_quiz, name='create_quiz'),
+    path('api/questions/<int:question_id>/', update_question, name='update_question'),
+    path('api/questions/<int:question_id>/delete/', delete_question, name='delete_question'),
 ]
+
+

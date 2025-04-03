@@ -39,3 +39,24 @@ Request body not needed
 
 http://localhost:8000/api/search_questions/?category=Geometry
 Request body not needed, parameter needed in URL
+
+create quiz: http://127.0.0.1:8000/api/create_quiz/
+{
+  "username": "teacher123",
+  "quizName": "Math Quiz 1",
+  "selectedQuestions": [
+    { "questionId": 5, "score": 10 },
+    { "questionId": 8, "score": 5 }
+  ]
+}
+
+update question
+{
+  "text": "What is the value of x in 3x + 6 = 15?",
+  "level": "Medium",
+  "category": "Algebra",
+  "correctAnswer": "3"
+}
+
+
+DELETE http://localhost:8000/api/questions/<question_id>/delete/
