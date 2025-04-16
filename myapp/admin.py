@@ -1,9 +1,7 @@
 from django.contrib import admin
-from .models import User, Student, Teacher, Question, Quiz, StudentExam, Answer, AIAnalysis, ParentStudentMapping, Doubt
+from .models import User, Question, Quiz, StudentExam, Answer, AIAnalysis, ParentStudentMapping, Doubt
 
 admin.site.register(User)
-admin.site.register(Student)
-admin.site.register(Teacher)
 admin.site.register(Question)
 admin.site.register(Quiz)
 admin.site.register(StudentExam)
