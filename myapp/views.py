@@ -183,43 +183,52 @@ def search_questions(request):
 
     serializer = QuestionCreateSerializer(questions, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 @api_view(['POST'])
 def create_quiz(request):
-    data = request.data
-    username = data.get("username")
-    quiz_title = data.get("quizName")
-    selected_questions = data.get("selectedQuestions", [])
+        data = request.data
+        username = data.get("username")
+        quiz_title = data.get("quizName")
+        selected_questions = data.get("selectedQuestions", [])
 
-    if not username or not quiz_title or not selected_questions:
-        return Response({"error": "Missing required fields"}, status=400)
+        # Log received input for debugging
+        print("Received selected_questions:", selected_questions)
 
-    try:
-        user = User.objects.get(username=username)
-        teacher_id = user.id  # Grab teacher's user ID
+        if not username or not quiz_title or not selected_questions:
+            return Response({"error": "Missing required fields"}, status=400)
 
-        total_marks = sum(q["score"] for q in selected_questions)
+        # Validate each selected question has 'score' and 'questionId'
+        for q in selected_questions:
+            if "score" not in q or "questionId" not in q:
+                return Response({"error": "Each selected question must include 'score' and 'questionId'."}, status=400)
 
-        # Manually insert into quiz table (managed = False)
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO quiz (teacher_id, quiz_title, total_marks, created_at) VALUES (%s, %s, %s, NOW()) RETURNING quiz_id",
-                [teacher_id, quiz_title, total_marks]
-            )
-            quiz_id = cursor.fetchone()[0]
+        try:
+            user = User.objects.get(username=username)
+            teacher_id = user.id
 
-            for q in selected_questions:
-                question_id = q["questionId"]
+            total_marks = sum(q.get("score", 0) for q in selected_questions)
+
+            with connection.cursor() as cursor:
                 cursor.execute(
-                    "INSERT INTO Quiz_Questions (quiz_id, question_id) VALUES (%s, %s)",
-                    [quiz_id, question_id]
+                    "INSERT INTO quiz (teacher_id, quiz_title, total_marks, created_at) VALUES (%s, %s, %s, NOW()) RETURNING quiz_id",
+                    [teacher_id, quiz_title, total_marks]
                 )
+                quiz_id = cursor.fetchone()[0]
 
-        return Response({"message": "Quiz created successfully!", "quiz_id": quiz_id}, status=201)
+                for q in selected_questions:
+                    question_id = q["questionId"]
+                    cursor.execute(
+                        "INSERT INTO Quiz_Questions (quiz_id, question_id) VALUES (%s, %s)",
+                        [quiz_id, question_id]
+                    )
 
-    except User.DoesNotExist:
-        return Response({"error": "Invalid username"}, status=404)
-    except Exception as e:
-        return Response({"error": str(e)}, status=500)
+            return Response({"message": "Quiz created successfully!", "quiz_id": quiz_id}, status=201)
+
+        except User.DoesNotExist:
+            return Response({"error": "Invalid username"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
 
 @api_view(['PUT'])
 def update_question(request, question_id):

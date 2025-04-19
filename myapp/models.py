@@ -105,7 +105,7 @@ class QuizQuestion(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
-        db_table = 'Quiz_Questions'
+        db_table = 'quiz_questions'
         unique_together = ('quiz', 'question')
 
 
