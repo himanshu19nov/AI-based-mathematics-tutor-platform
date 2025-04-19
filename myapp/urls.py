@@ -4,6 +4,7 @@ from .views import create_question
 from .views import create_quiz
 from .views import update_question
 from .views import delete_question
+from .views import ask_ai
 
 
 urlpatterns = [
@@ -20,6 +21,7 @@ urlpatterns = [
     path('api/create_quiz/', create_quiz, name='create_quiz'),
     path('api/questions/<int:question_id>/', update_question, name='update_question'),
     path('api/questions/<int:question_id>/delete/', delete_question, name='delete_question'),
+    path('api/ask', ask_ai, name='ask_ai'),
 ]
 
 

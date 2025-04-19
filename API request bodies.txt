@@ -60,3 +60,14 @@ update question
 
 
 DELETE http://localhost:8000/api/questions/<question_id>/delete/
+
+
+POST http://localhost:8000/api/ask
+Request body:
+{
+  "question": "What is the derivative of sin(x)?"
+}
+Sample Response:
+{
+  "answer": "The derivative of sin(x) is cos(x)."
+}

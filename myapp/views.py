@@ -28,6 +28,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Question
+import openai
+from django.conf import settings
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
 
 
 def user_registration(request):
@@ -257,5 +262,31 @@ def delete_question(request, question_id):
         return Response({'message': 'Question deleted successfully'}, status=status.HTTP_200_OK)
     except Question.DoesNotExist:
         return Response({'error': 'Question not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Configure OpenAI with your API key
+openai.api_key = settings.OPENAI_API_KEY
+
+
+@api_view(['POST'])
+def ask_ai(request):
+    question = request.data.get('question')
+    if not question:
+        return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Call OpenAI ChatGPT API
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # or "gpt-4"
+            messages=[
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": question}
+            ]
+        )
+        answer = response['choices'][0]['message']['content']
+        return Response({'answer': answer})
+
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
