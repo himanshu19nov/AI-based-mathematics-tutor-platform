@@ -33,6 +33,20 @@ from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from transformers import pipeline
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
+# Load model globally once
+qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+
+# Optional: You can change this to a custom passage or context
+default_context = """
+Mathematics is the study of numbers, shapes, and patterns. It is used in everything from engineering and architecture to economics and data science.
+The Pythagorean theorem states that in a right-angled triangle, a² + b² = c².
+The derivative of sin(x) is cos(x). The area of a circle is πr².
+"""
 
 
 def user_registration(request):
@@ -270,23 +284,24 @@ def delete_question(request, question_id):
 openai.api_key = settings.OPENAI_API_KEY
 
 
+import openai
+from openai import OpenAI
+
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
 @api_view(['POST'])
 def ask_ai(request):
-    question = request.data.get('question')
+    question = request.data.get("question")
+
     if not question:
         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Call OpenAI ChatGPT API
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # or "gpt-4"
-            messages=[
-                {"role": "system", "content": "You are a helpful AI assistant."},
-                {"role": "user", "content": question}
-            ]
-        )
-        answer = response['choices'][0]['message']['content']
-        return Response({'answer': answer})
+        result = qa_pipeline({
+            'context': default_context,
+            'question': question
+        })
 
+        return Response({'answer': result['answer']})
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
