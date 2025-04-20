@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-color: #f4f4f4;
+  background-color: seashell;
   overflow-y: auto;
 }
 
@@ -35,7 +35,8 @@
   width: 80%;
   max-width: 800px;
   padding: 20px;
-  background-color: #fff;
+  /* background-color: #fff; */
+  background-color: seashell;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -52,6 +53,43 @@
   display: flex;
   flex-direction: column;
 
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columns, will create 2 rows with 5 items */
+  gap: 8px;
+}
+
+.ai-generate-container {
+  /* display: flex; */
+  align-items: center;
+  gap: 12px; /* space between label and button */
+  margin: 5px 0;
+  text-align: center;
+}
+
+.AI-label {
+  font-weight: bold;
+  color: grey;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.ai-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  background-color: blueviolet;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.ai-button:hover {
+  background-color: blue;
 }
 
 label {
@@ -102,17 +140,180 @@ textarea {
 }
 
 .add-button {
-  width: 50%;
-  font-size: 15px;
+  width: 200px;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-button:hover {
+  background-color: #0056b3;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  padding: 8px 12px;
+  border-bottom: 2px solid #ccc;
+  margin-bottom: 5px;
+}
+
+.list-header span:first-child {
+  margin-left: 12px;
+}
+.list-header span:last-child {
+  margin-right: 20px;
+}
+
+.question-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.id-col{
+  /* flex: 0 0 auto;  */
+  margin-right: 20px;
+  width: 10px;
+  white-space: nowrap; 
+}
+.question-col {
+  flex: 2;
+  text-align: left;
+}
+
+.level-col {
+  flex: 1;
+  text-align: center;
+}
+
+.action-col {
+  flex: 1;
+  text-align: right;
+} 
+
+.score-col {
+  flex: 1;
+  text-align: right;
+}
+
+
+.add_remove_button {
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add_remove_button:hover {
+  background-color: #0056b3;
 }
 
 .scrollable-list {
   max-height: 300px; /* Adjust height to accommodate 10 rows */
   overflow-y: auto;  /* Enable vertical scrolling */
   border: 1px solid #ccc; /* Optional: Adds a border around the scrollable area */
-  padding: 5px;
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
 }
 
-.scrollable-list li {
-  height: 30px; /* Adjust based on your preferred row height */
+.scrollable-list li.question_item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.quiz-info-table {
+  display: table;
+  border-collapse: collapse;
+  width: 80%;
+  margin-bottom: 0px;
+  font-size: 0.95rem;
+}
+
+.info-row {
+  display: table-row;
+}
+
+.info-label,
+.info-value {
+  display: table-cell;
+  padding: 5px 8px;
+
+}
+
+.info-label {
+  font-weight: bold;
+  width: 100px;
+}
+
+.questions-row{
+  padding: 20px 8px;
+  width: 80%;
+}
+
+.question-list-header {
+  display: flex;
+  font-weight: bold;
+  padding: 4px 0;
+  border-bottom: 2px solid #ccc;
+  margin-bottom: 4px;
+  padding-left: 1.2rem; /* match list padding */
+}
+
+.question-text-header {
+  flex: 1;
+  margin-right: 10px;
+}
+
+.score-header {
+  flex: 0 0 60px;
+  text-align: right;
+  margin-right: 20px;
+}
+
+.question-list {
+  margin: 0;
+  padding-left: 1.2rem; /* ensure list starts correctly */
+  list-style-type: decimal; /* ensures numbering */
+  counter-reset: list-counter; /* reset counter */
+  border-bottom: 2px solid #ccc;
+  margin-bottom: 4px;
+}
+
+.question-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.question-item::before {
+  content: counter(list-counter) ". "; /* Add number before each item */
+  counter-increment: list-counter; /* Increment counter */
+  position: absolute;
+  left: 0;
+  width: 2rem; /* Ensure space for the number */
+  text-align: right;
+}
+
+.question-text {
+  flex: 1;
+  margin-left: 2rem; /* Add some space for the number */
+}
+
+.question-score {
+  flex: 0 0 60px;
+  text-align: right;
+  margin-right: 20px;
 }

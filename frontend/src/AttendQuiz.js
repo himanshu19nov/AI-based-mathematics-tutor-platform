@@ -4,43 +4,49 @@ import './styles/AttendQuiz.css';
 const AttendQuiz = () => {
   const [quizLevel, setQuizLevel] = useState('');
   const [quizName, setQuizName] = useState('');
+  const [quizCategory, setQuizCategory] = useState('');
+  const [username, setUsername] = useState('');
   const [quizData, setQuizData] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [quizStarted, setQuizStarted] = useState(false);
-  const [quizzes, setQuizzes] = useState([]);
   const [score, setScore] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(60); // Timer feature
+  const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
 
-  useEffect(() => {
-    fetch('http://localhost:5000/api/quizzes')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setQuizzes(data);
-        }
-      })
-      .catch(err => console.error('Error fetching quizzes:', err));
-  }, []);
+  const quizNameOptions = ['Math Quiz', 'Science Quiz'];
+
+  const categoryOptions = {
+    'Math Quiz': ['Trigonometry', 'Arithmetic', 'Geometry', 'Algebra', 'Calculus'],
+    'Science Quiz': ['Physics', 'Chemistry', 'Biology']
+  };
 
   useEffect(() => {
     if (quizStarted && timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0) {
+    } else if (quizStarted && timeLeft === 0) {
       handleSubmitQuiz();
     }
   }, [quizStarted, timeLeft]);
 
   const handleStartQuiz = async () => {
-    if (!quizName) return;
+    if (!quizName || !quizLevel || !quizCategory || !username) {
+      alert("Please fill all required fields before starting the quiz.");
+      return;
+    }
+
     try {
-      const response = await fetch(`http://localhost:5000/api/quizzes/${quizName}`);
+      const response = await fetch(`http://localhost:5000/api/quizzes/${quizName}?level=${quizLevel}&category=${quizCategory}`);
       const data = await response.json();
-      setQuizData(data.quiz);
-      setQuizStarted(true);
-      setCurrentQuestionIndex(0);
-      setTimeLeft(60); // Reset timer
+
+      if (data.quiz && Array.isArray(data.quiz)) {
+        setQuizData(data.quiz);
+        setQuizStarted(true);
+        setCurrentQuestionIndex(0);
+        setTimeLeft(120); // reset timer
+      } else {
+        alert("Quiz data not available for selected options.");
+      }
     } catch (error) {
       console.error('Error fetching quiz:', error);
     }
@@ -67,7 +73,7 @@ const AttendQuiz = () => {
       const response = await fetch('http://localhost:5000/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quizName, answers })
+        body: JSON.stringify({ username, quizName, answers })
       });
 
       const result = await response.json();
@@ -96,6 +102,16 @@ const AttendQuiz = () => {
       {!quizStarted ? (
         <div className="quiz-setup">
           <div className="dropdown-container">
+            <label>Username</label>
+            <input
+              type="text"
+              value={username}
+              placeholder="Enter your username"
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+
+          <div className="dropdown-container">
             <label>Quiz Level</label>
             <select value={quizLevel} onChange={(e) => setQuizLevel(e.target.value)}>
               <option value="">Select Level</option>
@@ -107,13 +123,28 @@ const AttendQuiz = () => {
 
           <div className="dropdown-container">
             <label>Quiz Name</label>
-            <select value={quizName} onChange={(e) => setQuizName(e.target.value)}>
+            <select value={quizName} onChange={(e) => {
+              setQuizName(e.target.value);
+              setQuizCategory('');
+            }}>
               <option value="">Select Quiz</option>
-              {quizzes.map((quiz, idx) => (
-                <option key={idx} value={quiz}>{quiz}</option>
+              {quizNameOptions.map((name, idx) => (
+                <option key={idx} value={name}>{name}</option>
               ))}
             </select>
           </div>
+
+          {quizName && (
+            <div className="dropdown-container">
+              <label>Quiz Category</label>
+              <select value={quizCategory} onChange={(e) => setQuizCategory(e.target.value)}>
+                <option value="">Select Category</option>
+                {categoryOptions[quizName].map((category, idx) => (
+                  <option key={idx} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <button onClick={handleStartQuiz} className="attend-button">
             Start Quiz
@@ -161,5 +192,3 @@ const AttendQuiz = () => {
 };
 
 export default AttendQuiz;
-
-/* This the backend API integration code */

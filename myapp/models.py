@@ -90,10 +90,18 @@ class Question(models.Model):
 
 
 class Quiz(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    ]
+
     quiz_id = models.AutoField(primary_key=True)
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, limit_choices_to={'role': 'teacher'})
     quiz_title = models.CharField(max_length=255)
+    quiz_level = models.CharField(max_length=50, default='year_1')
     total_marks = models.IntegerField()
+    quiz_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')  
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -103,6 +111,7 @@ class Quiz(models.Model):
 class QuizQuestion(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, null=True, blank=True)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
+    score = models.IntegerField(default=1) 
 
     class Meta:
         db_table = 'quiz_questions'

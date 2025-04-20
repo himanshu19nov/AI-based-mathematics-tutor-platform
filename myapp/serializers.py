@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Question
+from .models import User, Question, Quiz, QuizQuestion
 
 
 class UserSignupSerializer(serializers.ModelSerializer):
@@ -52,8 +52,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['username', 'difficulty_level', 'category', 'question_text', 'ansType', 'answers', 'correct_answer']
-
+        fields = ['username', 'difficulty_level', 'category', 'question_text', 'ansType', 'answers', 'correct_answer'] 
     def validate_category(self, value):
         valid = ['Arithmetic', 'Trigonometry', 'Algebra', 'Geometry', 'Calculus']
         if value not in valid:
@@ -75,3 +74,23 @@ class QuestionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = '__all__'
+
+
+class QuizQuestionSerializer(serializers.ModelSerializer):
+    question = QuestionListSerializer()
+
+    class Meta:
+        model = QuizQuestion
+        fields = ['question', 'score']
+
+class QuizListSerializer(serializers.ModelSerializer):
+    teacher_username = serializers.CharField(source='teacher.username', read_only=True)
+    questions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Quiz
+        fields = '__all__'
+
+    def get_questions(self, obj):
+        quiz_questions = QuizQuestion.objects.filter(quiz=obj).select_related('question')
+        return QuizQuestionSerializer(quiz_questions, many=True).data
