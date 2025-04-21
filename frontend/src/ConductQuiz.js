@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import './styles/ConductQuiz.css';
 import QuizSetup from './QuizSetup';
+import QuestionSearch from './QuestionSearch';
+import QuizSearch from './QuizSearch';
 import axios from 'axios';
 
 const App = () => {
   const [showForm, setShowForm] = useState(false);
   const [showQuizSetup, setShowQuizSetup] = useState(false);
+  const [showQuestionSearch, setShowQuestionSearch] = useState(false);
+  const [showQuizSearch, setShowQuizSearch] = useState(false);
   const [formData, setFormData] = useState({
-    username: 'HARDCODED-username',
+    // username: 'HARDCODED-username',
+    username: '',
     difficulty_level: '',
     category: '',
     question_text: '',  
@@ -15,6 +21,21 @@ const App = () => {
     answers: Array(3).fill(''),  // Create an array to hold answers for 10 fields
     correct_answer: '',
   });
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setFormData(prev => ({
+          ...prev,
+          username: decoded.username || '',
+        }));
+      } catch (error) {
+        console.error('Invalid token:', error);
+      }
+    }
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -34,11 +55,29 @@ const App = () => {
   const handleQuestionSetup = () => {
     setShowForm(true);
     setShowQuizSetup(false);
-  }
+    setShowQuestionSearch(false);
+    setShowQuizSearch(false);
+  };
 
   const handleQuizSetup = () => {
     setShowQuizSetup(true); // Show quiz setup form
     setShowForm(false); // Hide question form if it's visible
+    setShowQuestionSearch(false);
+    setShowQuizSearch(false);
+  };
+
+  const handleQuestionSearch = () => {
+    setShowForm(false); 
+    setShowQuizSetup(false); 
+    setShowQuestionSearch(true);
+    setShowQuizSearch(false);
+  };
+
+  const handleQuizSearch = () => {
+    setShowForm(false); 
+    setShowQuizSetup(false); 
+    setShowQuestionSearch(false);
+    setShowQuizSearch(true);
   };
 
   const handleAddAnswerOption = () => {
@@ -48,17 +87,47 @@ const App = () => {
 
   const handleResetAll = () => {
     // Reset all fields to their initial empty states
-    setFormData({
+    setFormData(prev => ({
+      ...prev,
       difficulty_level: '',
       question_text: '',
       category: '',
       answerType: '',  // Reset answerType
       answers: Array(3).fill(''),  // Reset answers array to empty strings
       correct_answer: '',
-    });
+    }));
   };
 
   const handleSubmit = async () => {
+    // validation check
+    if (!formData.difficulty_level) {
+      alert('Please select a difficulty level.');
+      return;
+    }
+    if (!formData.category) {
+      alert('Please select a category.');
+      return;
+    }
+    if (!formData.question_text.trim()) {
+      alert('Please enter the question text.');
+      return;
+    }
+    if (!formData.ansType) {
+      alert('Please select an answer type.');
+      return;
+    }
+    if (
+      (formData.ansType === 'single_choice' || formData.ansType === 'multiple_choice') &&
+      formData.answers.filter(ans => ans.trim()).length < 2
+    ) {
+      alert('Please enter at least two answer options.');
+      return;
+    }
+    if (!formData.correct_answer.trim()) {
+      alert('Please enter the correct answer.');
+      return;
+    }
+
     try {
       const response = await axios.post('http://localhost:8000/api/create_question/', formData);
       console.log('Backend Response:', response.data);
@@ -70,15 +139,28 @@ const App = () => {
   };
 
   const handleAIGenerate = () => {
-    const generatedData = {
-      difficulty_level: 'year_2',
-      question_text: 'What shape has 4 sides and all sides are the same length?',
-      category: 'Geometry',
-      ansType: 'single_choice',
-      answers: ['Rectangle', 'Triangle', 'Circle', 'Square', '', '','','', '',''], 
-      correct_answer: 'Square',
-    };
-    setFormData(generatedData);
+
+    // validation check
+    if (!formData.difficulty_level) {
+      alert('Please select a difficulty level.');
+      return;
+    }
+    if (!formData.category) {
+      alert('Please select a category.');
+      return;
+    }
+
+    setFormData(prev=>(
+      {
+        ...prev,
+        difficulty_level: 'year_2',
+        question_text: 'What shape has 4 sides and all sides are the same length?',
+        category: 'Geometry',
+        ansType: 'single_choice',
+        answers: ['Rectangle', 'Triangle', 'Circle', 'Square', '', '','','', '',''], 
+        correct_answer: 'Square',
+      }
+    ));
   };
 
   return (
@@ -88,12 +170,13 @@ const App = () => {
           Question Setup
         </button>
         <button className="button" onClick={handleQuizSetup}>Quiz Setup</button>
-        <button className="button">Question Search</button>
-        <button className="button">Quiz Search</button>
+        <button className="button" onClick={handleQuestionSearch}>Question Search</button>
+        <button className="button" onClick={handleQuizSearch}>Quiz Publish</button>
       </div>
 
       {showForm && (
         <div className="form-container">
+          <div style={{textAlign:"center", fontWeight:"bold"}}> Question Setup</div>
           <div className="form-grid">
             {/* Question Level */}
             <div className="form-row">
@@ -121,24 +204,10 @@ const App = () => {
               </select>
             </div>
 
-            {/* Question Input */}
-            <div className="form-row">
-              <label htmlFor="question_text">Question Input</label>
-              <textarea
-                id="question_text"
-                name="question_text"
-                value={formData.question_text}
-                onChange={handleInputChange}
-                placeholder="Please type question here"
-                rows="5"
-              />
-              <input type="file" name="questionImage" id="questionImage" />
-            </div>
-
             {/* Question Category */}
             <div className="form-row">
               <label>Question Category</label>
-              <div className="radio-buttons">
+              <div className="radio-buttons category-grid">
                 <label>
                   <input
                     type="radio"
@@ -190,6 +259,31 @@ const App = () => {
                   Calculus
                 </label>
               </div>
+            </div>
+
+            {/* AI Question button */}
+            <div className="ai-generate-container">
+                <label className="AI-label">Select Level and Category to generate Question</label>
+                {/* AI Generate Button */}
+                <button className="ai-button" onClick={handleAIGenerate}>
+                  AI Generate
+                </button>
+                
+            </div>
+
+
+            {/* Question Input */}
+            <div className="form-row">
+              <label htmlFor="question_text">Question Input</label>
+              <textarea
+                id="question_text"
+                name="question_text"
+                value={formData.question_text}
+                onChange={handleInputChange}
+                placeholder="Please type question here"
+                rows="5"
+              />
+              <input type="file" name="questionImage" id="questionImage" />
             </div>
 
             {/* Answer Type */}
@@ -266,10 +360,7 @@ const App = () => {
 
             <div className="form-row">
               <div className="button-group">
-                {/* AI Generate Button */}
-                <button className="button" onClick={handleAIGenerate}>
-                  AI Generate
-                </button>
+
                 {/* Reset All Button */}
                 <button className="button" onClick={handleResetAll}>
                   Reset All
@@ -297,6 +388,15 @@ const App = () => {
         <QuizSetup />
       )}
 
+      {/* Question Search*/}
+      {showQuestionSearch && (
+        <QuestionSearch />
+      )}
+
+      {/* Quiz Search*/}
+      {showQuizSearch && (
+        <QuizSearch />
+      )}
 
 
     </div>

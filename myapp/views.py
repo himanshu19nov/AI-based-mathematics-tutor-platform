@@ -38,6 +38,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
+from .serializers import QuizListSerializer
+
 # Load model globally once
 qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
 
@@ -133,14 +135,21 @@ def user_login(request):
             
             # Generate JWT token on successful login
             refresh = RefreshToken.for_user(user)
-            access_token = str(refresh.access_token)
-            
+            # access_token = str(refresh.access_token)
+            access_token = refresh.access_token
+            access_token['username'] = user.username
+            access_token['fullName'] = user.fullName
+            access_token['role'] = user.role
+
+
+
             return Response({
                 'message': 'Login successful',
                 'username': user.username,
                 'role': user.role,
                 'status': user.userStatus,
-                'token': access_token
+                # 'token': access_token
+                'token': str(access_token)
             }, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -155,6 +164,8 @@ def create_question(request):
     if serializer.is_valid():
         serializer.save()
         return Response({'message': 'Question created successfully!'}, status=status.HTTP_201_CREATED)
+    # Log the validation errors for debugging
+    print(serializer.errors)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -200,7 +211,8 @@ def search_questions(request):
     if difficulty:
         questions = questions.filter(difficulty_level__iexact=difficulty)
 
-    serializer = QuestionCreateSerializer(questions, many=True)
+    # serializer = QuestionCreateSerializer(questions, many=True)
+    serializer = QuestionListSerializer(questions, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
@@ -208,6 +220,8 @@ def create_quiz(request):
         data = request.data
         username = data.get("username")
         quiz_title = data.get("quizName")
+        quiz_level = data.get("quizLevel")
+        quiz_status = data.get("quizStatus", "draft")
         selected_questions = data.get("selectedQuestions", [])
 
         # Log received input for debugging
@@ -225,20 +239,29 @@ def create_quiz(request):
             user = User.objects.get(username=username)
             teacher_id = user.id
 
-            total_marks = sum(q.get("score", 0) for q in selected_questions)
+            # total_marks = sum(q.get("score", 0) for q in selected_questions)
+            total_marks = sum(int(q.get("score", 0)) for q in selected_questions)
 
             with connection.cursor() as cursor:
+                print(f"Teacher ID: {teacher_id}, Quiz Title: {quiz_title}, Quiz Status: {quiz_status}, Total Score: {total_marks}")
                 cursor.execute(
-                    "INSERT INTO quiz (teacher_id, quiz_title, total_marks, created_at) VALUES (%s, %s, %s, NOW()) RETURNING quiz_id",
-                    [teacher_id, quiz_title, total_marks]
+                    # "INSERT INTO quiz (teacher_id, quiz_title, total_marks, created_at) VALUES (%s, %s, %s, NOW()) RETURNING quiz_id",
+                    # [teacher_id, quiz_title, total_marks]
+                    "INSERT INTO quiz (teacher_id, quiz_title, quiz_level, quiz_status, total_marks, created_at) VALUES (%s, %s, %s, %s, %s, NOW()) RETURNING quiz_id",
+                    [teacher_id, quiz_title, quiz_level, quiz_status, total_marks]
                 )
                 quiz_id = cursor.fetchone()[0]
+                # print(f"Inserted quiz, got quiz_id: {quiz_id}")
 
                 for q in selected_questions:
                     question_id = q["questionId"]
+                    score = int(q["score"])
+                    # print(f"Quiz ID: {quiz_id}, Question ID: {question_id}, Score: {score}")
                     cursor.execute(
-                        "INSERT INTO Quiz_Questions (quiz_id, question_id) VALUES (%s, %s)",
-                        [quiz_id, question_id]
+                        # "INSERT INTO Quiz_Questions (quiz_id, question_id) VALUES (%s, %s)",
+                        # [quiz_id, question_id]
+                        "INSERT INTO quiz_questions (quiz_id, question_id, score) VALUES (%s, %s, %s)",
+                        [quiz_id, question_id, score]
                     )
 
             return Response({"message": "Quiz created successfully!", "quiz_id": quiz_id}, status=201)
@@ -246,6 +269,7 @@ def create_quiz(request):
         except User.DoesNotExist:
             return Response({"error": "Invalid username"}, status=404)
         except Exception as e:
+            print(f"Error: {str(e)}")
             return Response({"error": str(e)}, status=500)
 
 
@@ -305,3 +329,26 @@ def ask_ai(request):
         return Response({'answer': result['answer']})
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def get_all_quizzes(request):
+    quizzes = Quiz.objects.select_related('teacher').all().order_by('-created_at')
+    serializer = QuizListSerializer(quizzes, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+def update_quiz_status(request, quiz_id):
+    quiz_status = request.data.get("quiz_status")
+
+    if not quiz_status:
+        return Response({"error": "quiz_status is required."}, status=400)
+
+    try:
+        quiz = Quiz.objects.get(pk=quiz_id)
+        quiz.quiz_status = quiz_status
+        quiz.save()
+        return Response({"message": "Quiz status updated successfully!"})
+    except Quiz.DoesNotExist:
+        return Response({"error": "Quiz not found."}, status=404)

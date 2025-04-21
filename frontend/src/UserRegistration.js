@@ -19,7 +19,7 @@ const UserRegistration = () => {
   const [message, setMessage] = useState('');
 
   const academicOptions = [
-    'Kindergarten', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 
+    'Kindergarten', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5',
     'Year 6', 'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'
   ];
 
@@ -60,8 +60,6 @@ const UserRegistration = () => {
       const newUser = { username, email, firstName, lastName, password, role, academicLevel, userStatus };
       await axios.post('http://localhost:8000/api/user/create/', newUser);
       setMessage('User created successfully!');
-      // Log success in the console
-      console.log('User created successfully!')
       fetchUsers();
       resetForm();
     } catch (error) {
@@ -116,24 +114,42 @@ const UserRegistration = () => {
   return (
     <div className="user-registration">
       <div className="mode-toggle">
-        <button onClick={() => setMode('create')} className={mode === 'create' ? 'active' : ''}>Create User</button>
-        <button onClick={() => setMode('modify')} className={mode === 'modify' ? 'active' : ''}>Modify User</button>
-        <button onClick={() => setMode('search')} className={mode === 'search' ? 'active' : ''}>Search</button>
+        <button onClick={() => setMode('create')} className={`mode-button ${mode === 'create' ? 'active' : ''}`}>Create User</button>
+        <button onClick={() => setMode('modify')} className={`mode-button ${mode === 'modify' ? 'active' : ''}`}>Modify User</button>
+        <button onClick={() => setMode('search')} className={`mode-button ${mode === 'search' ? 'active' : ''}`}>Search</button>
       </div>
 
       {mode === 'create' && (
         <div className="form-container">
-          <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" />
-          <select value={role} onChange={e => setRole(e.target.value)}>
-            <option value="">Select Role</option>
-            <option value="teacher">Teacher</option>
-            <option value="student">Student</option>
-            <option value="parent">Parent</option>
-          </select>
-          <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First Name" />
-          <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last Name" />
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
+          <div className="form-field">
+            <label>Username</label>
+            <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" />
+          </div>
+          <div className="form-field">
+            <label>Role</label>
+            <select value={role} onChange={e => setRole(e.target.value)}>
+              <option value="">Select Role</option>
+              <option value="teacher">Teacher</option>
+              <option value="student">Student</option>
+              <option value="parent">Parent</option>
+            </select>
+          </div>
+          <div className="form-field">
+            <label>First Name</label>
+            <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First Name" />
+          </div>
+          <div className="form-field">
+            <label>Last Name</label>
+            <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last Name" />
+          </div>
+          <div className="form-field">
+            <label>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
+          </div>
+          <div className="form-field">
+            <label>Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
+          </div>
 
           <div className="checkbox-group">
             <label><strong>Academic Level:</strong></label>
@@ -144,51 +160,71 @@ const UserRegistration = () => {
               </label>
             ))}
           </div>
-          <button onClick={handleCreateUser}>Create User</button>
+          <button className="submit-button" onClick={handleCreateUser}>Create User</button>
         </div>
       )}
 
       {mode === 'modify' && (
         <div className="form-container">
-          <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" />
-          <button onClick={handleFetchUser}>Select</button>
+          <div className="form-field">
+            <label>Username</label>
+            <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" />
+          </div>
+          <button className="submit-button" onClick={handleFetchUser}>Select</button>
 
           {role && (
             <>
-              <select value={role} onChange={e => setRole(e.target.value)}>
-                <option value="">Select Role</option>
-                <option value="teacher">Teacher</option>
-                <option value="student">Student</option>
-                <option value="parent">Parent</option>
-              </select>
-              <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First Name" />
-              <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last Name" />
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
+              <div className="form-field">
+                <label>Role</label>
+                <select value={role} onChange={e => setRole(e.target.value)}>
+                  <option value="">Select Role</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="student">Student</option>
+                  <option value="parent">Parent</option>
+                </select>
+              </div>
+              <div className="form-field">
+                <label>First Name</label>
+                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First Name" />
+              </div>
+              <div className="form-field">
+                <label>Last Name</label>
+                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last Name" />
+              </div>
+              <div className="form-field">
+                <label>Email</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
+              </div>
 
               <div className="checkbox-group">
+                <label><strong>Academic Level:</strong></label>
                 {academicOptions.map(level => (
                   <label key={level}>
                     <input type="checkbox" checked={academicLevel.includes(level)}
                       onChange={() => handleAcademicLevelChange(level)} /> {level}
                   </label>
                 ))}
+              </div>
+
+              <div className="password-reset-group">
+                <label>Password Reset:</label>
+                <div className="radio-group">
+                  <label><input type="radio" value="yes" checked={passwordReset === 'yes'} onChange={() => setPasswordReset('yes')} /> Yes</label>
+                  <label><input type="radio" value="no" checked={passwordReset === 'no'} onChange={() => setPasswordReset('no')} /> No</label>
                 </div>
 
-              <div>
-                <label>Password Reset:</label>
-                <input type="radio" value="yes" checked={passwordReset === 'yes'} onChange={() => setPasswordReset('yes')} /> Yes
-                <input type="radio" value="no" checked={passwordReset === 'no'} onChange={() => setPasswordReset('no')} /> No
-
                 {passwordReset === 'yes' && (
-                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Enter New Password" />
+                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Enter New Password" className="new-password-input" />
                 )}
               </div>
 
               <label>User Status:</label>
-              <input type="radio" value="enable" checked={userStatus === 'enable'} onChange={() => setUserStatus('enable')} /> Enable
-              <input type="radio" value="disable" checked={userStatus === 'disable'} onChange={() => setUserStatus('disable')} /> Disable
+              <div className="radio-group">
+                <label><input type="radio" value="enable" checked={userStatus === 'enable'} onChange={() => setUserStatus('enable')} /> Enable</label>
+                <label><input type="radio" value="disable" checked={userStatus === 'disable'} onChange={() => setUserStatus('disable')} /> Disable</label>
+              </div>
 
-              <button onClick={handleModifyUser}>Modify User</button>
+              <button className="submit-button" onClick={handleModifyUser}>Modify User</button>
             </>
           )}
         </div>
@@ -231,6 +267,3 @@ const UserRegistration = () => {
 };
 
 export default UserRegistration;
-
-
-/* This is the backend API version code, THE BEST version so far, all functional */

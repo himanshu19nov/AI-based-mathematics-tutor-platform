@@ -3,147 +3,228 @@
 /* Layout for the entire app */
 .App {
   display: flex;
-  flex-direction: column; /* Stack the welcome section on top */
-  background-color: #f4f4f4;
+  flex-direction: column;
+  background-color: seashell;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
+/* Login page styling */
 .login {
-  background-color: lightseagreen;  
+  background-color: lightseagreen;
   color: white;
   text-align: center;
   padding: 100px;
-  height: 500px;
+  height: 100vh; /* Full height to remove bottom white space */
   font-size: 25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: top;
+  align-items: center;
+  margin: 0;
 }
 
 .login-container {
   display: flex;
   flex-direction: column;
-  align-items: center; /* Centers the inputs and button */
-  justify-content: center;
+  align-items: center;
   width: 100%;
 }
 
 .login-input {
-  width: 100%; /* Makes inputs take the full width of the container */
-  max-width: 400px; /* Max width to control size */
-  padding: 12px 15px; /* Padding for better visual appeal */
-  margin: 10px 0; /* Vertical spacing between inputs */
-  font-size: 30px; /* Font size for the text */
-  line-height: 1.5; /* Consistent line height */
-  border: 1px solid #ccc; /* Border style */
-  border-radius: 5px; /* Rounded corners */
-  box-sizing: border-box; /* Ensures padding is part of the width */
+  width: 100%;
+  max-width: 500px;
+  height: 50px;
+  padding: 10px 40px;
+  margin: 10px 0px;
+  font-size: 16px;
+  line-height: 50px;
+  text-align: center; /* Center the placeholder and input text */
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
 }
 
-.login-button{
-  width: 100%; /* Full width of container */
-  max-width: 200px; /* Match the max width of the input fields */
-  margin-top: 10px;
+.login-button {
+  width: 100%;
+  max-width: 200px;
+  margin-top: 20px;
   padding: 15px;
-  background-color: #516451; 
+  background-color: #516451;
   color: white;
   border: none;
   border-radius: 20px;
-  font-size: 30px;
+  font-size: 25px;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
 .login-button:hover {
-  background-color: #45a049; /* Darker green when hovered */
+  background-color: #45a049;
 }
 
-/* Welcome Section */
-.welcome {
-  background-color: lightseagreen;  
-  color: white;
-  text-align: center;
-  padding: 0px;
-  height: 100px;
-}
-
-.welcome h1 {
-  margin: 0;
-}
-
-.welcome p {
-  margin: 5px 0;
-}
-
-/* Layout for the sidebar and main content */
+/* Content layout */
 .content-container {
   display: flex;
-  flex: 1;
-  margin-top: 0px; /* Add margin top to avoid overlap with the fixed welcome section */
+  min-height: 100vh;
+  background-color: seashell;
 }
 
-
-/* Sidebar styles */
+/* Sidebar updated to be full height including top */
 .sidebar {
-  width: 150px; 
-  background-color: #f4f4f4;
-  color: white;
-  padding: 20px;
-  position: fixed;
-  top: 100px; /* Start the sidebar below the welcome div */
-  left: 0; /* Keep it on the left */
-  height: calc(100vh - 60px); /* Full height minus the height of the welcome section */
-  overflow: hidden;
+  width: 250px;
+  background-color: seashell;
+  padding: 40px 20px 0 20px;
+  border-right: 1px solid #e0e0e0;
 }
 
-
+/* Sidebar buttons */
 .sidebar-button {
-  width: 100%;  
-  padding: 10px; 
-  background-color: lightseagreen; 
-  border: none; /* Remove button border */
-  color: white; 
-  text-align: left; 
-  font-size: 15px; 
-  margin: 20px 5px; /* Add space between buttons */
-  cursor: pointer; /* Pointer cursor for button */
-  border-radius: 20px; /* Rounded corners */
+  background-color: lightseagreen;
+  color: white;
+  border: none;
+  padding: 16px 10px;
+  margin: 20px 0px;
+  width: 90%;
+  text-align: left;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .sidebar-button:hover {
-  background-color: red; 
-}
-
-.sidebar-button:focus {
-  outline: none; /* Remove focus outline */
+  background-color: #45a049;
 }
 
 .sidebar-button.active {
-  background-color: red;  
+  background-color: #2e7d32;
 }
 
+/* Logout button floats top-right */
+.logout-button-container {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+}
 
 .logout-button {
-  position: absolute;
-  top: 10px;
-  right: 20px; 
   background-color: rgb(200, 100, 100);
   color: white;
   border: none;
-  padding: 10px;
-  cursor: pointer;
-  margin: 20px 5px;
+  padding: 10px 20px;
   font-size: 16px;
-  border-radius: 20px;
+  border-radius: 10px;
+  cursor: pointer;
 }
-
 
 /* Main content area */
 .main-content {
-  margin-left: 150px; /* Offset the content to the right of the sidebar */
-  padding: 0 20px;
-  width: calc(100% - 150px); /* Ensure main content takes up remaining width */
-  background-color: #f4f4f4; 
+  flex: 1;
+  padding: 10px;
+  background-color: seashell;
+  overflow-y: auto;
 }
-
 
 .main-content div {
-  background-color: #f4f4f4; 
+  background-color: seashell;
   padding: 0px;
 }
+
+/* Welcome Section with custom background */
+.welcome-section {
+  padding: 60px 20px;
+  text-align: center;
+  background: #f0f9ff; /* Light blue/gray background */
+  border-radius: 10px;
+  margin: 20px;
+}
+
+.welcome-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  animation: fadeInWelcome 0.6s ease;
+}
+
+.welcome-image {
+  width: 600px;
+  max-width: 100%;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Title/subtitle animation + size + style */
+.welcome-title {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  color: darkslategray;
+  animation: slideIn 0.8s ease;
+}
+
+.highlight-name {
+  color: blue;        
+  font-weight: bold;      
+  font-style: italic;    
+}
+
+.platform-name {
+  font-size: 2.1rem;
+  font-weight: bold;
+  color: #2e7d32;
+  animation: slideIn 0.9s ease;
+}
+
+.welcome-subtitle {
+  font-size: 1.2rem;
+  color: #666;
+  margin-top: 10px;
+  animation: fadeIn 1s ease;
+}
+
+/* Animations */
+.animated-content {
+  animation: fadeInSlide 0.4s ease;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInWelcome {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* The most updated functional animated css page */
