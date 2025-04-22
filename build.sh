@@ -9,6 +9,5 @@ set -o errexit
 # Collect static files
 # python manage.py collectstatic --noinput
 
-# Start the Gunicorn server
-gunicorn myproject.wsgi:application --bind 0.0.0.0:$PORT
-
+# gunicorn --workers 1 --threads 2 --bind 0.0.0.0:$PORT
+gunicorn myproject.wsgi:application --workers=1 --threads=2 --bind 0.0.0.0:$PORT
