@@ -3,11 +3,8 @@
 # Exit on error
 set -o errexit
 
-# Skip migrations to avoid memory crash
-# python manage.py migrate --noinput
-
-# Collect static files
-# python manage.py collectstatic --noinput
-
-# gunicorn --workers 1 --threads 2 --bind 0.0.0.0:$PORT
-gunicorn myproject.wsgi:application --workers=1 --threads=2 --bind 0.0.0.0:$PORT
+# Start the Gunicorn server with sync worker
+gunicorn myproject.wsgi:application \
+    --bind 0.0.0.0:$PORT \
+    --workers 1 \
+    --worker-class sync
