@@ -3,11 +3,12 @@
 # Exit on error
 set -o errexit
 
-# Run migrations
-python manage.py migrate --noinput
+# Skip migrations to avoid memory crash
+# python manage.py migrate --noinput
 
-# Collect static files (optional if you're using Django's static hosting)
+# Collect static files
 python manage.py collectstatic --noinput
 
 # Start the Gunicorn server
 gunicorn myproject.wsgi:application --bind 0.0.0.0:$PORT
+
