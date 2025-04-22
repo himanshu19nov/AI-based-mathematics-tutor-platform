@@ -33,15 +33,15 @@ from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from transformers import pipeline
+# from transformers import pipeline
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
 from .serializers import QuizListSerializer
 
-# Load model globally once
-qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+# # Load model globally once
+# qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
 
 # Optional: You can change this to a custom passage or context
 default_context = """
@@ -315,6 +315,10 @@ client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 @api_view(['POST'])
 def ask_ai(request):
+    from transformers import pipeline
+    # Load model in function
+    qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+
     question = request.data.get("question")
 
     if not question:
