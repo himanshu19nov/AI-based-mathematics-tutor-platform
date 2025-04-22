@@ -159,4 +159,6 @@ CORS_ALLOW_HEADERS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-PORT = os.getenv('PORT', '10000')  # Render uses this environment variable for the port
+# PORT = os.getenv('PORT', '10000')  # Render uses this environment variable for the port
+
+print("Django settings loaded")
