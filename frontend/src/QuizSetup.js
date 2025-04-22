@@ -4,6 +4,7 @@ import axios from 'axios';
 import './styles/ConductQuiz.css'; 
 
 const QuizSetup = () => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [questionLevel, setQuestionLevel] = useState('');
   const [questionCategory, setQuestionCategory] = useState('');
   const handleCategoryChange = (e) => {
@@ -22,7 +23,8 @@ const QuizSetup = () => {
   // Fetch questions when question level or category changes
   useEffect(() => {
     if (questionLevel && questionCategory) {
-      axios.get('http://localhost:8000/api/search_questions/', {
+      // axios.get('http://localhost:8000/api/search_questions/', {
+      axios.get(`${apiUrl}/api/search_questions/`, {
         headers: {
           Authorization: `Bearer ${token}`
         },
@@ -96,8 +98,9 @@ const QuizSetup = () => {
     };
 
     // Submit the quiz data to the backend
-    axios.post('http://localhost:8000/api/create_quiz/', quizData,
-      {
+    // axios.post('http://localhost:8000/api/create_quiz/', quizData,
+    axios.post(`${apiUrl}/api/create_quiz/`, quizData,
+    {
         headers: {
           Authorization: `Bearer ${token}`, 
         }

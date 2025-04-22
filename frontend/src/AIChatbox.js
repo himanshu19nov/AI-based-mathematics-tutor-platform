@@ -3,6 +3,7 @@ import axios from 'axios';
 import './styles/AIChatbox.css';  
 
 const AIChatbox = () => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [userMessage, setUserMessage] = useState('');   // Holds user input message
   const [chatHistory, setChatHistory] = useState([]);    // Holds the chat history (both user and AI messages)
   const [loading, setLoading] = useState(false);         // To show loading indicator when waiting for AI
@@ -24,9 +25,10 @@ const AIChatbox = () => {
 
     try {
       setLoading(true);  // Set loading state to true while waiting for the response
-
+      const apiUrl = process.env.REACT_APP_API_URL;
       // Send the user message to the Django backend API
-      const response = await axios.post('http://localhost:8000/api/ask', { question: userMessage });
+      // const response = await axios.post('http://localhost:8000/api/ask', { question: userMessage });
+      const response = await axios.post(`${apiUrl}/api/ask`, { question: userMessage });
       
       const aiAnswer = response.data.answer || "Sorry, I couldn't understand your question.";
 

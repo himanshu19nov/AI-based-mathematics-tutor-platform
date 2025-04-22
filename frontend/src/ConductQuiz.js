@@ -7,6 +7,7 @@ import QuizSearch from './QuizSearch';
 import axios from 'axios';
 
 const App = () => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [showForm, setShowForm] = useState(false);
   const [showQuizSetup, setShowQuizSetup] = useState(false);
   const [showQuestionSearch, setShowQuestionSearch] = useState(false);
@@ -129,7 +130,8 @@ const App = () => {
     }
 
     try {
-      const response = await axios.post('http://localhost:8000/api/create_question/', formData);
+      // const response = await axios.post('http://localhost:8000/api/create_question/', formData);
+      const response = await axios.post(`${apiUrl}/api/create_question/`, formData);
       console.log('Backend Response:', response.data);
       alert('Form submitted successfully!');
     } catch (error) {
