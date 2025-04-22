@@ -1,1 +1,1 @@
-web: gunicorn myproject.wsgi --workers 1 --threads 2 --bind 0.0.0.0:$PORT
+gunicorn your_project.wsgi --worker-class gthread --threads 1 --workers 1 --bind 0.0.0.0:$PORT
