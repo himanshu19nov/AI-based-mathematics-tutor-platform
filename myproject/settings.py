@@ -87,21 +87,21 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Capstone',
-        'USER': 'postgres',
-        'PASSWORD': '1313',
-        'HOST': 'localhost',
-        'PORT': '5432',
-
-    }
-}
-
 # DATABASES = {
-#     'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'Capstone',
+#         'USER': 'postgres',
+#         'PASSWORD': '1313',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+
+#     }
 # }
+
+DATABASES = {
+    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+}
 
 
 # Password validation
@@ -157,3 +157,5 @@ CORS_ALLOW_HEADERS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+PORT = os.getenv('PORT', '10000')  # Render uses this environment variable for the port
