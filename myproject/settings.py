@@ -150,3 +150,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://mst-platform.onrender.com",
 ]
+
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'authorization',
+]
+
+CORS_ALLOW_CREDENTIALS = True
