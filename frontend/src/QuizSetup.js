@@ -127,7 +127,7 @@ const QuizSetup = () => {
             onChange={(e) => setQuestionLevel(e.target.value)}
           >
             <option value="">Select Level</option>
-            <option value="kindergarten">Kindergarten</option>
+            <option value="kindergartens">Kindergartens</option>
             <option value="year_1">Year 1</option>
             <option value="year_2">Year 2</option>
             <option value="year_3">Year 3</option>
