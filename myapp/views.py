@@ -37,6 +37,7 @@ from transformers import pipeline
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+import os
 
 from .serializers import QuizListSerializer
 
@@ -336,22 +337,23 @@ from openai import OpenAI
 #     except Exception as e:
 #         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['POST'])
 def ask_ai(request):
-    openai.api_key = os.environ.get("OPENAI_API_KEY")  # pulled from Railway env vars
+    openai.api_key = os.environ.get("OPENAI_API_KEY")
     question = request.data.get("question")
 
     if not question:
         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        qa = get_qa_pipeline()
-        result = qa({
-            'context': default_context,
-            'question': question
-        })
-
-        return Response({'answer': result['answer']})
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful math tutor."},
+                {"role": "user", "content": question}
+            ]
+        )
+        answer = response.choices[0].message.content.strip()
+        return Response({'answer': answer})
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
