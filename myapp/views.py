@@ -50,11 +50,15 @@ def get_qa_pipeline():
         get_qa_pipeline.model = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
     return get_qa_pipeline.model
 
+
 # Optional: You can change this to a custom passage or context
 default_context = """
 Mathematics is the study of numbers, shapes, and patterns. It is used in everything from engineering and architecture to economics and data science.
 The Pythagorean theorem states that in a right-angled triangle, a² + b² = c².
 The derivative of sin(x) is cos(x). The area of a circle is πr².
+Mean is the average of a data set.
+Median is the middle value of a data set when it is arranged in order.
+Mode is the value that appears most frequently in a data set.
 """
 
 
@@ -338,38 +342,62 @@ from openai import OpenAI
 #         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 import traceback
+import requests
 
 @csrf_exempt
 @api_view(['POST'])
 def ask_ai(request):
-    import os
-    import openai
-
-    print("Received request to /api/ask")
-    openai.api_key = os.environ.get("OPENAI_API_KEY")
-    print("API Key:", openai.api_key is not None)  # Don't print the full key
+    TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+    if not TOGETHER_API_KEY:
+        return Response({'error': 'Together API key not set'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     question = request.data.get("question")
-    print("Question:", question)
-
     if not question:
         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
 
+    print("Question:", question)
+
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful math tutor."},
-                {"role": "user", "content": question}
-            ]
+        headers = {
+            "Authorization": f"Bearer {TOGETHER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        # Inject default context into the user prompt (simple RAG)
+        user_prompt = f"{default_context}\n\nQuestion: {question}"
+
+        payload = {
+            # "model": "togethercomputer/llama-2-7b-chat",
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "messages": [
+                {"role": "system", "content": "You are a helpful math tutor. Use the provided context to assist the student."},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 512,
+            "top_p": 0.95,
+        }
+
+        response = requests.post(
+            "https://api.together.xyz/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=20
         )
-        answer = response.choices[0].message.content.strip()
+
+        response.raise_for_status()
+        result = response.json()
+        answer = result["choices"][0]["message"]["content"]
         return Response({'answer': answer})
+
+    except requests.exceptions.HTTPError as e:
+        print("HTTP ERROR:", e.response.text)
+        return Response({'error': 'HTTP Error from Together.ai'}, status=status.HTTP_502_BAD_GATEWAY)
     except Exception as e:
         print("EXCEPTION:", str(e))
         traceback.print_exc()
         return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+    
 
 @api_view(['GET'])
 def get_all_quizzes(request):
