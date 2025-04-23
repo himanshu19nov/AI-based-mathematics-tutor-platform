@@ -337,11 +337,20 @@ from openai import OpenAI
 #     except Exception as e:
 #         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+import traceback
+
 @csrf_exempt
 @api_view(['POST'])
 def ask_ai(request):
+    import os
+    import openai
+
+    print("Received request to /api/ask")
     openai.api_key = os.environ.get("OPENAI_API_KEY")
+    print("API Key:", openai.api_key is not None)  # Don't print the full key
+
     question = request.data.get("question")
+    print("Question:", question)
 
     if not question:
         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -357,7 +366,9 @@ def ask_ai(request):
         answer = response.choices[0].message.content.strip()
         return Response({'answer': answer})
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print("EXCEPTION:", str(e))
+        traceback.print_exc()
+        return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
