@@ -311,13 +311,13 @@ def delete_question(request, question_id):
 
 
 # Configure OpenAI with your API key
-openai.api_key = settings.OPENAI_API_KEY
+# openai.api_key = settings.OPENAI_API_KEY
 
 
 import openai
 from openai import OpenAI
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+# client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 # @api_view(['POST'])
 # def ask_ai(request):
@@ -338,6 +338,7 @@ client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 @api_view(['POST'])
 def ask_ai(request):
+    openai.api_key = os.environ.get("OPENAI_API_KEY")  # pulled from Railway env vars
     question = request.data.get("question")
 
     if not question:
