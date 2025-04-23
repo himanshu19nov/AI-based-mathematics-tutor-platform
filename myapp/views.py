@@ -40,8 +40,14 @@ from rest_framework import status
 
 from .serializers import QuizListSerializer
 
-# Load model globally once
-qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+# # Load model globally once
+# qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+
+# Lazy-load QA model only when needed
+def get_qa_pipeline():
+    if not hasattr(get_qa_pipeline, "model"):
+        get_qa_pipeline.model = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+    return get_qa_pipeline.model
 
 # Optional: You can change this to a custom passage or context
 default_context = """
@@ -313,6 +319,23 @@ from openai import OpenAI
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
+# @api_view(['POST'])
+# def ask_ai(request):
+#     question = request.data.get("question")
+
+#     if not question:
+#         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         result = qa_pipeline({
+#             'context': default_context,
+#             'question': question
+#         })
+
+#         return Response({'answer': result['answer']})
+#     except Exception as e:
+#         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['POST'])
 def ask_ai(request):
     question = request.data.get("question")
@@ -321,7 +344,8 @@ def ask_ai(request):
         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        result = qa_pipeline({
+        qa = get_qa_pipeline()
+        result = qa({
             'context': default_context,
             'question': question
         })
