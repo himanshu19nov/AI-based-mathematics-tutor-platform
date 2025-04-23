@@ -28,12 +28,12 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Question
-import openai
+# import openai
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from transformers import pipeline
+# from transformers import pipeline
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -43,12 +43,6 @@ from .serializers import QuizListSerializer
 
 # # Load model globally once
 # qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
-
-# Lazy-load QA model only when needed
-def get_qa_pipeline():
-    if not hasattr(get_qa_pipeline, "model"):
-        get_qa_pipeline.model = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
-    return get_qa_pipeline.model
 
 
 # Optional: You can change this to a custom passage or context
@@ -319,8 +313,8 @@ def delete_question(request, question_id):
 # openai.api_key = settings.OPENAI_API_KEY
 
 
-import openai
-from openai import OpenAI
+# import openai
+# from openai import OpenAI
 
 # client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
