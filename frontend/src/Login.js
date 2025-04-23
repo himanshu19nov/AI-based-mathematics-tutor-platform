@@ -69,7 +69,7 @@ const Login = ({ setIsAuthenticated }) => {
     <div className="login">      
           <img src="/logo.jpg" alt="Login Image" style={{ width: '100px', height: 'auto', objectFit: 'contain' }} />
         
-      <h2>Login to Mathematics Tutuoring Service (MTS) Platform </h2>
+      <h2>Login to Mathematics Tutoring Service (MTS) Platform </h2>
       {errorMessage && <div className="error-message">{errorMessage}</div>}
       <div className="login-container">
         <form onSubmit={handleLogin}>
