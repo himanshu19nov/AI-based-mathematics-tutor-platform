@@ -55,6 +55,12 @@ Median is the middle value of a data set when it is arranged in order.
 Mode is the value that appears most frequently in a data set.
 """
 
+from django.http import JsonResponse
+
+# Optimize Initial Load 
+def health_check(request):
+    return JsonResponse({'status': 'ok'})
+
 
 def user_registration(request):
     return render(request, 'pages/user_registration.html')  # Updated path

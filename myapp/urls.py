@@ -11,6 +11,7 @@ from .views import update_quiz_status
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('api/health/', views.health_check, name='health_check'),
     path('user-registration/', views.user_registration, name='user_registration'),
     path('api/user/create/', views.user_signup, name='user_signup'),
     path('api/user/<int:user_id>/update/', views.update_user, name='update_user'),
