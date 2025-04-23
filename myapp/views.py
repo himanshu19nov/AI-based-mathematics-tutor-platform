@@ -248,7 +248,7 @@ def create_quiz(request):
             total_marks = sum(int(q.get("score", 0)) for q in selected_questions)
 
             with connection.cursor() as cursor:
-                print(f"Teacher ID: {teacher_id}, Quiz Title: {quiz_title}, Quiz Status: {quiz_status}, Total Score: {total_marks}")
+                print(f"Teacher ID: {teacher_id}, Quiz Title: {quiz_title}, Quiz Level: {quiz_level}, Quiz Status: {quiz_status}, Total Score: {total_marks}")
                 cursor.execute(
                     # "INSERT INTO quiz (teacher_id, quiz_title, total_marks, created_at) VALUES (%s, %s, %s, NOW()) RETURNING quiz_id",
                     # [teacher_id, quiz_title, total_marks]

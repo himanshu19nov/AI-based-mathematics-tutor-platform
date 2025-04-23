@@ -97,6 +97,11 @@ const QuizSetup = () => {
       })),
     };
 
+    if (!quizLevel) {
+      alert("Please select a quiz level.");
+      return;
+    }
+
     // Submit the quiz data to the backend
     // axios.post('http://localhost:8000/api/create_quiz/', quizData,
     axios.post(`${apiUrl}/api/create_quiz/`, quizData,
@@ -257,7 +262,7 @@ const QuizSetup = () => {
             value={quizLevel}
             onChange={(e) => setQuizLevel(e.target.value)}
           >
-            <option value="kindergarten">Kindergarten</option>
+            <option value="kindergartens">Kindergartens</option>
             <option value="year_1">Year 1</option>
             <option value="year_2">Year 2</option>
             <option value="year_3">Year 3</option>
