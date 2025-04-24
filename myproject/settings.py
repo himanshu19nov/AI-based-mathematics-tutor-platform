@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -27,9 +28,11 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 SECRET_KEY = 'django-insecure-2labv%fiza#8l^ue7pxvlripfw0lo^vynmm(se2p(6oyj+nuuo'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -56,7 +59,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ROOT_URLCONF = 'myproject.urls'
 
@@ -82,16 +88,20 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Capstone',
-        'USER': 'postgres',
-        'PASSWORD': '1313',
-        'HOST': 'localhost',
-        'PORT': '5432',
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'Capstone',
+#         'USER': 'postgres',
+#         'PASSWORD': '1313',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
 
-    }
+#     }
+# }
+
+DATABASES = {
+    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
 }
 
 
@@ -137,6 +147,24 @@ STATICFILES_DIRS = [BASE_DIR / 'myapp/static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# CORS_ALLOW_HEADERS = [
+#     'content-type',
+#     'authorization',
+# ]
+
+# CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "https://mts-platform.onrender.com",
+    "http://localhost:3000",  
 ]
+
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers)
+
+CORS_ALLOW_CREDENTIALS = True
+
+PORT = os.getenv('PORT', '10000')  # Render uses this environment variable for the port
+
+print("Django settings loaded")

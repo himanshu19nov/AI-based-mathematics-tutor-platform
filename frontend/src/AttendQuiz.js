@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './styles/AttendQuiz.css';
 
 const AttendQuiz = () => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [quizLevel, setQuizLevel] = useState('');
   const [quizName, setQuizName] = useState('');
   const [quizCategory, setQuizCategory] = useState('');

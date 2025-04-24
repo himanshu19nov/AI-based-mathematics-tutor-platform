@@ -4,6 +4,7 @@ import axios from 'axios';
 import './styles/ConductQuiz.css'; 
 
 const QuizSetup = () => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [questionLevel, setQuestionLevel] = useState('');
   const [questionCategory, setQuestionCategory] = useState('');
   const handleCategoryChange = (e) => {
@@ -22,7 +23,8 @@ const QuizSetup = () => {
   // Fetch questions when question level or category changes
   useEffect(() => {
     if (questionLevel && questionCategory) {
-      axios.get('http://localhost:8000/api/search_questions/', {
+      // axios.get('http://localhost:8000/api/search_questions/', {
+      axios.get(`${apiUrl}/api/search_questions/`, {
         headers: {
           Authorization: `Bearer ${token}`
         },
@@ -95,9 +97,15 @@ const QuizSetup = () => {
       })),
     };
 
+    if (!quizLevel) {
+      alert("Please select a quiz level.");
+      return;
+    }
+
     // Submit the quiz data to the backend
-    axios.post('http://localhost:8000/api/create_quiz/', quizData,
-      {
+    // axios.post('http://localhost:8000/api/create_quiz/', quizData,
+    axios.post(`${apiUrl}/api/create_quiz/`, quizData,
+    {
         headers: {
           Authorization: `Bearer ${token}`, 
         }
@@ -124,7 +132,7 @@ const QuizSetup = () => {
             onChange={(e) => setQuestionLevel(e.target.value)}
           >
             <option value="">Select Level</option>
-            <option value="kindergarten">Kindergarten</option>
+            <option value="kindergartens">Kindergartens</option>
             <option value="year_1">Year 1</option>
             <option value="year_2">Year 2</option>
             <option value="year_3">Year 3</option>
@@ -254,7 +262,7 @@ const QuizSetup = () => {
             value={quizLevel}
             onChange={(e) => setQuizLevel(e.target.value)}
           >
-            <option value="kindergarten">Kindergarten</option>
+            <option value="kindergartens">Kindergartens</option>
             <option value="year_1">Year 1</option>
             <option value="year_2">Year 2</option>
             <option value="year_3">Year 3</option>

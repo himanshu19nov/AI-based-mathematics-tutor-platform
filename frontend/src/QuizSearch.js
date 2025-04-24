@@ -3,6 +3,7 @@ import axios from 'axios';
 import './styles/ConductQuiz.css';
 
 const QuizSearch = () => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [quizzes, setQuizzes] = useState([]);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [showQuizDetails, setShowQuizDetails] = useState(false);
@@ -14,7 +15,8 @@ const QuizSearch = () => {
   const token = sessionStorage.getItem('token');
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/list_quiz/', {
+    // axios.get('http://localhost:8000/api/list_quiz/', {
+    axios.get(`${apiUrl}/api/list_quiz/`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -48,7 +50,8 @@ const QuizSearch = () => {
   };
 
   const updateQuizStatus = (quizId, status) => {
-    axios.put(`http://localhost:8000/api/quiz/${quizId}/status/`, 
+    // axios.put(`http://localhost:8000/api/quiz/${quizId}/status/`, 
+    axios.put(`${apiUrl}/api/quiz/${quizId}/status/`, 
       { quiz_status: status },
       {
         headers: { Authorization: `Bearer ${token}` }
@@ -84,7 +87,7 @@ const QuizSearch = () => {
           onChange={handleLevelChange}
         >
           <option value="">All Levels</option>
-          <option value="kindergarten">Kindergarten</option>
+          <option value="kindergartens">Kindergartens</option>
           <option value="year_1">Year 1</option>
           <option value="year_2">Year 2</option>
           <option value="year_3">Year 3</option>

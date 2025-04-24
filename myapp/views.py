@@ -28,27 +28,38 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Question
-import openai
+# import openai
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from transformers import pipeline
+# from transformers import pipeline
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+import os
 
 from .serializers import QuizListSerializer
 
-# Load model globally once
-qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+# # Load model globally once
+# qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+
 
 # Optional: You can change this to a custom passage or context
 default_context = """
 Mathematics is the study of numbers, shapes, and patterns. It is used in everything from engineering and architecture to economics and data science.
 The Pythagorean theorem states that in a right-angled triangle, a² + b² = c².
 The derivative of sin(x) is cos(x). The area of a circle is πr².
+Mean is the average of a data set.
+Median is the middle value of a data set when it is arranged in order.
+Mode is the value that appears most frequently in a data set.
 """
+
+from django.http import JsonResponse
+
+# Optimize Initial Load 
+def health_check(request):
+    return JsonResponse({'status': 'ok'})
 
 
 def user_registration(request):
@@ -243,7 +254,7 @@ def create_quiz(request):
             total_marks = sum(int(q.get("score", 0)) for q in selected_questions)
 
             with connection.cursor() as cursor:
-                print(f"Teacher ID: {teacher_id}, Quiz Title: {quiz_title}, Quiz Status: {quiz_status}, Total Score: {total_marks}")
+                print(f"Teacher ID: {teacher_id}, Quiz Title: {quiz_title}, Quiz Level: {quiz_level}, Quiz Status: {quiz_status}, Total Score: {total_marks}")
                 cursor.execute(
                     # "INSERT INTO quiz (teacher_id, quiz_title, total_marks, created_at) VALUES (%s, %s, %s, NOW()) RETURNING quiz_id",
                     # [teacher_id, quiz_title, total_marks]
@@ -305,31 +316,88 @@ def delete_question(request, question_id):
 
 
 # Configure OpenAI with your API key
-openai.api_key = settings.OPENAI_API_KEY
+# openai.api_key = settings.OPENAI_API_KEY
 
 
-import openai
-from openai import OpenAI
+# import openai
+# from openai import OpenAI
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+# client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
+# @api_view(['POST'])
+# def ask_ai(request):
+#     question = request.data.get("question")
+
+#     if not question:
+#         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+#     try:
+#         result = qa_pipeline({
+#             'context': default_context,
+#             'question': question
+#         })
+
+#         return Response({'answer': result['answer']})
+#     except Exception as e:
+#         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+import traceback
+import requests
+
+@csrf_exempt
 @api_view(['POST'])
 def ask_ai(request):
-    question = request.data.get("question")
+    TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+    if not TOGETHER_API_KEY:
+        return Response({'error': 'Together API key not set'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    question = request.data.get("question")
     if not question:
         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
 
+    print("Question:", question)
+
     try:
-        result = qa_pipeline({
-            'context': default_context,
-            'question': question
-        })
+        headers = {
+            "Authorization": f"Bearer {TOGETHER_API_KEY}",
+            "Content-Type": "application/json"
+        }
 
-        return Response({'answer': result['answer']})
+        # Inject default context into the user prompt (simple RAG)
+        user_prompt = f"{default_context}\n\nQuestion: {question}"
+
+        payload = {
+            # "model": "togethercomputer/llama-2-7b-chat",
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "messages": [
+                {"role": "system", "content": "You are a helpful math tutor. Use the provided context to assist the student."},
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 512,
+            "top_p": 0.95,
+        }
+
+        response = requests.post(
+            "https://api.together.xyz/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=20
+        )
+
+        response.raise_for_status()
+        result = response.json()
+        answer = result["choices"][0]["message"]["content"]
+        return Response({'answer': answer})
+
+    except requests.exceptions.HTTPError as e:
+        print("HTTP ERROR:", e.response.text)
+        return Response({'error': 'HTTP Error from Together.ai'}, status=status.HTTP_502_BAD_GATEWAY)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        print("EXCEPTION:", str(e))
+        traceback.print_exc()
+        return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 
 @api_view(['GET'])
 def get_all_quizzes(request):

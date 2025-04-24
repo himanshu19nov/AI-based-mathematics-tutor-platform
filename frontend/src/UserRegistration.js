@@ -3,6 +3,7 @@ import axios from 'axios';
 import './styles/UserRegistration.css';
 
 const UserRegistration = () => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [users, setUsers] = useState([]);
   const [username, setUsername] = useState('');
   const [role, setRole] = useState('');
@@ -29,7 +30,8 @@ const UserRegistration = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/user/listAll');
+      // const response = await axios.get('http://localhost:8000/api/user/listAll');
+      const response = await axios.get(`${apiUrl}/api/user/listAll`);
       setUsers(response.data.users);
     } catch (error) {
       setMessage('Failed to load users!');
@@ -58,7 +60,8 @@ const UserRegistration = () => {
   const handleCreateUser = async () => {
     try {
       const newUser = { username, email, firstName, lastName, password, role, academicLevel, userStatus };
-      await axios.post('http://localhost:8000/api/user/create/', newUser);
+      // await axios.post('http://localhost:8000/api/user/create/', newUser);
+      await axios.post(`${apiUrl}/api/user/create/`, newUser);
       setMessage('User created successfully!');
       fetchUsers();
       resetForm();
@@ -73,7 +76,8 @@ const UserRegistration = () => {
         role, firstName, lastName, email, academicLevel, userStatus,
         newPassword: passwordReset === 'yes' ? newPassword : undefined
       };
-      await axios.put(`http://localhost:8000/api/user/update/${username}`, updatedUser);
+      // await axios.put(`http://localhost:8000/api/user/update/${username}`, updatedUser);
+      await axios.put(`${apiUrl}/api/user/update/${username}`, updatedUser);
       setMessage('User modified successfully!');
       fetchUsers();
       resetForm();
@@ -84,7 +88,8 @@ const UserRegistration = () => {
 
   const handleFetchUser = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/user/getUser/${username}`);
+      // const response = await axios.get(`http://localhost:8000/api/user/getUser/${username}`);
+      const response = await axios.get(`${apiUrl}/api/user/getUser/${username}`);
       const user = response.data.user;
       if (user) {
         setRole(user.role);
@@ -104,7 +109,8 @@ const UserRegistration = () => {
 
   const handleSearch = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/user/search?query=${searchQuery}`);
+      // const response = await axios.get(`http://localhost:8000/api/user/search?query=${searchQuery}`);
+      const response = await axios.get(`${apiUrl}/api/user/search?query=${searchQuery}`);
       setUsers(response.data.users);
     } catch (error) {
       setMessage('Search failed!');

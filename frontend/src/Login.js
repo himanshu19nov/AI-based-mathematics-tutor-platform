@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import './styles/App.css';
 
 const Login = ({ setIsAuthenticated }) => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -27,7 +28,8 @@ const Login = ({ setIsAuthenticated }) => {
   const handleLogin = async (event) => {
     event.preventDefault(); // Prevent page reload on form submission
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/login/', {
+      // const response = await fetch('http://127.0.0.1:8000/api/login/', {
+        const response = await fetch(`${apiUrl}/api/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +69,7 @@ const Login = ({ setIsAuthenticated }) => {
     <div className="login">      
           <img src="/logo.jpg" alt="Login Image" style={{ width: '100px', height: 'auto', objectFit: 'contain' }} />
         
-      <h2>Login to Mathematics Tutuoring Service (MTS) Platform </h2>
+      <h2>Login to Mathematics Tutoring Service (MTS) Platform </h2>
       {errorMessage && <div className="error-message">{errorMessage}</div>}
       <div className="login-container">
         <form onSubmit={handleLogin}>

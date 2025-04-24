@@ -3,6 +3,7 @@ import axios from 'axios';
 import './styles/ConductQuiz.css'; 
 
 const QuestionSearch = () => {
+  const apiUrl = process.env.REACT_APP_API_URL;
   const [questionLevel, setQuestionLevel] = useState('');
   const [questionCategory, setQuestionCategory] = useState('');
   const handleCategoryChange = (e) => {
@@ -28,7 +29,13 @@ const QuestionSearch = () => {
   // Fetch questions when question level or category changes
   useEffect(() => {
     if (questionLevel && questionCategory) {
-      axios.get('http://localhost:8000/api/search_questions/', {
+      // Reset view state
+      setShowQuestion(false);
+      setSelectedQuestion(null);
+      setAction(null);
+
+      // axios.get('http://localhost:8000/api/search_questions/', {
+      axios.get(`${apiUrl}/api/search_questions/`, {
         headers: {
           Authorization: `Bearer ${token}`
         },
@@ -111,7 +118,8 @@ const QuestionSearch = () => {
   // Handle Confirm Modify
   const handleConfirmModify = async () => {
     try {
-      await axios.put(`http://localhost:8000/api/questions/${selectedQuestion.id}/`, {
+      // await axios.put(`http://localhost:8000/api/questions/${selectedQuestion.id}/`, {
+      await axios.put(`${apiUrl}/api/questions/${selectedQuestion.id}/`, {
         text: questionData.questionInput,
         level: questionData.questionLevel,
         category: questionData.questionCategory,
@@ -131,7 +139,8 @@ const QuestionSearch = () => {
   // Handle Confirm Delete
   const handleConfirmDelete = async () => {
     try {
-      await axios.delete(`http://localhost:8000/api/questions/${selectedQuestion.id}/delete/`);
+      // await axios.delete(`http://localhost:8000/api/questions/${selectedQuestion.id}/delete/`);
+      await axios.delete(`${apiUrl}/api/questions/${selectedQuestion.id}/delete/`);
       alert('Question deleted successfully');
       setAction(null);
       setSelectedQuestion(null);
