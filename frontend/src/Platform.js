@@ -14,6 +14,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [fullName, setFullName] = useState('');
   const navigate = useNavigate();
+  const [role, setRole] = useState('');
 
   const token = sessionStorage.getItem('token');
 
@@ -22,6 +23,7 @@ function App() {
       try {
         const decoded = jwtDecode(token);
         setFullName(decoded.fullName || ''); 
+        setRole(decoded.role || '');
       } catch (err) {
         console.error('Token decoding failed', err);
       }
@@ -65,42 +67,54 @@ function App() {
           >
             🏠 Home
           </div>
+          {role === 'teacher' ? (
           <div
             className={`sidebar-button ${selectedOption === 'userRegistration' ? 'active' : ''}`}
             onClick={() => handleMenuClick('userRegistration')}
           >
             👤 User Registration
           </div>
+          ) : null}
+          {role === 'teacher' ? (
           <div
             className={`sidebar-button ${selectedOption === 'conductQuiz' ? 'active' : ''}`}
             onClick={() => handleMenuClick('conductQuiz')}
           >
             📚 Conduct Quiz
           </div>
+          ) : null}
+          {role === 'student' || role === 'teacher' ? (
           <div
             className={`sidebar-button ${selectedOption === 'attendQuiz' ? 'active' : ''}`}
             onClick={() => handleMenuClick('attendQuiz')}
           >
             📝 Attend Quiz
           </div>
+          ) : null}
+          {role === 'teacher' ? (
           <div
             className={`sidebar-button ${selectedOption === 'evaluateQuiz' ? 'active' : ''}`}
             onClick={() => handleMenuClick('evaluateQuiz')}
           >
             ✅ Evaluate Quiz
           </div>
+          ) : null}
+          {role === 'student' || role === 'teacher' ? (
           <div
             className={`sidebar-button ${selectedOption === 'chatbox' ? 'active' : ''}`}
             onClick={() => handleMenuClick('chatbox')}
           >
             🤖 Q&A Chatbox
           </div>
+          ) : null}
+          {role === 'student' || role === 'teacher' || role === 'parent' ? (
           <div
             className={`sidebar-button ${selectedOption === 'viewResult' ? 'active' : ''}`}
             onClick={() => handleMenuClick('viewResult')}
           >
             📊 View Result
           </div>
+          ) : null}
         </div>
 
         {/* Main Content Area */}
