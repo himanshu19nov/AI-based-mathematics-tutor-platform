@@ -6,19 +6,68 @@ from django.contrib.auth.hashers import make_password
 from myapp.models import User
 
 def create_default_user(apps, schema_editor):
-    # Check if the default user already exists to avoid duplication
-    if not User.objects.filter(username='user').exists():
-        User.objects.create(
-            username='user',
-            email='admin@admin.com',
-            firstName='Admin',
-            lastName='User',
-            fullName='Admin User',
-            password=make_password('password'),  
-            role='teacher',
-            academicLevel='N/A',
-            userStatus='active'
-        )
+    User = apps.get_model('myapp', 'User')  # Get model from historical version
+
+    users_to_create = [
+        {
+            'username': 'user',
+            'email': 'admin@admin.com',
+            'firstName': 'Admin',
+            'lastName': 'User',
+            'fullName': 'Admin User',
+            'password': 'password',  # plaintext; will be hashed
+            'role': 'teacher',
+            'academicLevel': 'N/A',
+            'userStatus': 'active'
+        },
+        {
+            'username': 'tester1',
+            'email': 'tester1@admin.com',
+            'firstName': 'tester1-first',
+            'lastName': 'tester1-last',
+            'fullName': 'tester1-first tester1-last',
+            'password': '123',
+            'role': 'teacher',
+            'academicLevel': 'N/A',
+            'userStatus': 'active'
+        },
+        {
+            'username': 'tester2',
+            'email': 'tester2@admin.com',
+            'firstName': 'tester2-first',
+            'lastName': 'tester2-last',
+            'fullName': 'tester2-first tester2-last',
+            'password': '123',
+            'role': 'teacher',
+            'academicLevel': 'N/A',
+            'userStatus': 'active'
+        },
+        {
+            'username': 'tester3',
+            'email': 'tester3@admin.com',
+            'firstName': 'tester3-first',
+            'lastName': 'tester3-last',
+            'fullName': 'tester3-first tester3-last',
+            'password': '123',
+            'role': 'teacger',
+            'academicLevel': 'N/A',
+            'userStatus': 'active'
+        },
+    ]
+
+    for user_data in users_to_create:
+        if not User.objects.filter(username=user_data['username']).exists():
+            User.objects.create(
+                username=user_data['username'],
+                email=user_data['email'],
+                firstName=user_data['firstName'],
+                lastName=user_data['lastName'],
+                fullName=user_data['fullName'],
+                password=make_password(user_data['password']),
+                role=user_data['role'],
+                academicLevel=user_data['academicLevel'],
+                userStatus=user_data['userStatus']
+            )
 
 class Migration(migrations.Migration):
 
