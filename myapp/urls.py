@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/questions/<int:question_id>/delete/', delete_question, name='delete_question'),
     path('api/ask', ask_ai, name='ask_ai'),
     path('api/list_quiz/', get_all_quizzes, name='get_all_quiz'),
-    path('api/quiz/<int:quiz_id>/update/', update_quiz, name='update_quiz')
-
+    path('api/quiz/<int:quiz_id>/update/', update_quiz, name='update_quiz'),
+    path('api/attend_quiz', views.attend_quiz, name='attend_quiz'),
+    path('api/submit', views.submit_quiz, name='submit_quiz')
 ]

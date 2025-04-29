@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .serializers import UserSignupSerializer
 from .models import User
+from .models import QuizQuestion
 from django.shortcuts import render
 import json
 import hashlib  # Only for demo hashing (not recommended for production)
@@ -412,3 +413,91 @@ def update_quiz(request, quiz_id):
 
     quiz.save()
     return Response({"message": "Quiz updated successfully!"}, status=200)
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Quiz, QuizQuestion
+import ast  # For safely evaluating stringified list
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Quiz, QuizQuestion
+import ast
+
+@api_view(['POST'])
+def attend_quiz(request):
+    quiz_name = request.data.get('quiz_name')
+    quiz_level = request.data.get('quiz_level')
+    category = request.data.get('category')
+
+    if not quiz_name or not quiz_level or not category:
+        return Response({'error': 'quiz_name, quiz_level, and category are required'}, status=400)
+
+    try:
+        quiz = Quiz.objects.get(quiz_title=quiz_name, quiz_level=quiz_level)
+        quiz_questions = QuizQuestion.objects.filter(quiz=quiz).select_related('question')
+
+        filtered_questions = []
+        for qq in quiz_questions:
+            if qq.question.category.lower() == category.lower():
+                try:
+                    options = ast.literal_eval(qq.question.answers)
+                except:
+                    options = []
+
+                filtered_questions.append({
+                    "questionId": qq.question.question_id,
+                    "question": qq.question.question_text,
+                    "options": options
+                })
+
+        if not filtered_questions:
+            return Response({'error': 'No questions found for selected category and level.'}, status=404)
+
+        return Response({'quiz': filtered_questions}, status=200)
+
+    except Quiz.DoesNotExist:
+        return Response({'error': 'Quiz not found.'}, status=404)
+
+
+@api_view(['POST'])
+def submit_quiz(request):
+    username = request.data.get('username')
+    quiz_name = request.data.get('quizName')
+    answers = request.data.get('answers')
+
+    if not username or not quiz_name or not answers:
+        return Response({'error': 'Missing fields'}, status=400)
+
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    try:
+        quiz = Quiz.objects.get(quiz_title=quiz_name)
+        quiz_questions = QuizQuestion.objects.filter(quiz=quiz).select_related('question')
+
+        score = 0
+        total_questions = quiz_questions.count()
+
+        for qq in quiz_questions:
+            question_id = qq.question.question_id
+            correct_answer = qq.question.correct_answer
+
+            user_answer = None
+            # Search the answer by questionId
+            for key, value in answers.items():
+                if str(key) == str(question_id):
+                    user_answer = value
+                    break
+
+            if user_answer and user_answer.strip().lower() == correct_answer.strip().lower():
+                score += 1
+
+        return Response({'score': score, 'totalQuestions': total_questions})
+
+    except Quiz.DoesNotExist:
+        return Response({'error': 'Quiz not found.'}, status=404)
