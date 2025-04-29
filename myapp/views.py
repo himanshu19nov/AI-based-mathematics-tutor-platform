@@ -228,60 +228,51 @@ def search_questions(request):
 
 @api_view(['POST'])
 def create_quiz(request):
-        data = request.data
-        username = data.get("username")
-        quiz_title = data.get("quizName")
-        quiz_level = data.get("quizLevel")
-        quiz_status = data.get("quizStatus", "draft")
-        selected_questions = data.get("selectedQuestions", [])
+    data = request.data
+    username = data.get("username")
+    quiz_title = data.get("quizName")
+    quiz_level = data.get("quizLevel")
+    quiz_status = data.get("quizStatus", "draft")
+    selected_questions = data.get("selectedQuestions", [])
 
-        # Log received input for debugging
-        print("Received selected_questions:", selected_questions)
+    print("Received selected_questions:", selected_questions)
 
-        if not username or not quiz_title or not selected_questions:
-            return Response({"error": "Missing required fields"}, status=400)
+    if not username or not quiz_title or not selected_questions:
+        return Response({"error": "Missing required fields"}, status=400)
 
-        # Validate each selected question has 'score' and 'questionId'
-        for q in selected_questions:
-            if "score" not in q or "questionId" not in q:
-                return Response({"error": "Each selected question must include 'score' and 'questionId'."}, status=400)
+    for q in selected_questions:
+        if "score" not in q or "questionId" not in q:
+            return Response({"error": "Each selected question must include 'score' and 'questionId'."}, status=400)
 
-        try:
-            user = User.objects.get(username=username)
-            teacher_id = user.id
+    try:
+        user = User.objects.get(username=username)
+        teacher_id = user.id
+        total_marks = sum(int(q.get("score", 0)) for q in selected_questions)
 
-            # total_marks = sum(q.get("score", 0) for q in selected_questions)
-            total_marks = sum(int(q.get("score", 0)) for q in selected_questions)
+        with connection.cursor() as cursor:
+            print(f"Teacher ID: {teacher_id}, Quiz Title: {quiz_title}, Quiz Level: {quiz_level}, Quiz Status: {quiz_status}, Total Score: {total_marks}")
+            cursor.execute(
+                "INSERT INTO quiz (teacher_id, quiz_title, quiz_level, quiz_status, total_marks, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                [teacher_id, quiz_title, quiz_level, quiz_status, total_marks]
+            )
+            quiz_id = cursor.lastrowid
 
-            with connection.cursor() as cursor:
-                print(f"Teacher ID: {teacher_id}, Quiz Title: {quiz_title}, Quiz Level: {quiz_level}, Quiz Status: {quiz_status}, Total Score: {total_marks}")
+            for q in selected_questions:
+                question_id = q["questionId"]
+                score = int(q["score"])
                 cursor.execute(
-                    # "INSERT INTO quiz (teacher_id, quiz_title, total_marks, created_at) VALUES (%s, %s, %s, NOW()) RETURNING quiz_id",
-                    # [teacher_id, quiz_title, total_marks]
-                    "INSERT INTO quiz (teacher_id, quiz_title, quiz_level, quiz_status, total_marks, created_at) VALUES (%s, %s, %s, %s, %s, NOW()) RETURNING quiz_id",
-                    [teacher_id, quiz_title, quiz_level, quiz_status, total_marks]
+                    "INSERT INTO quiz_questions (quiz_id, question_id, score) VALUES (?, ?, ?)",
+                    [quiz_id, question_id, score]
                 )
-                quiz_id = cursor.fetchone()[0]
-                # print(f"Inserted quiz, got quiz_id: {quiz_id}")
 
-                for q in selected_questions:
-                    question_id = q["questionId"]
-                    score = int(q["score"])
-                    # print(f"Quiz ID: {quiz_id}, Question ID: {question_id}, Score: {score}")
-                    cursor.execute(
-                        # "INSERT INTO Quiz_Questions (quiz_id, question_id) VALUES (%s, %s)",
-                        # [quiz_id, question_id]
-                        "INSERT INTO quiz_questions (quiz_id, question_id, score) VALUES (%s, %s, %s)",
-                        [quiz_id, question_id, score]
-                    )
+        return Response({"message": "Quiz created successfully!", "quiz_id": quiz_id}, status=201)
 
-            return Response({"message": "Quiz created successfully!", "quiz_id": quiz_id}, status=201)
+    except User.DoesNotExist:
+        return Response({"error": "Invalid username"}, status=404)
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return Response({"error": str(e)}, status=500)
 
-        except User.DoesNotExist:
-            return Response({"error": "Invalid username"}, status=404)
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            return Response({"error": str(e)}, status=500)
 
 
 @api_view(['PUT'])
@@ -405,18 +396,19 @@ def get_all_quizzes(request):
     serializer = QuizListSerializer(quizzes, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 @api_view(['PUT'])
-def update_quiz_status(request, quiz_id):
-    quiz_status = request.data.get("quiz_status")
-
-    if not quiz_status:
-        return Response({"error": "quiz_status is required."}, status=400)
-
+def update_quiz(request, quiz_id):
     try:
         quiz = Quiz.objects.get(pk=quiz_id)
-        quiz.quiz_status = quiz_status
-        quiz.save()
-        return Response({"message": "Quiz status updated successfully!"})
     except Quiz.DoesNotExist:
         return Response({"error": "Quiz not found."}, status=404)
+
+    data = request.data
+
+    quiz.quiz_title = data.get("quiz_title", quiz.quiz_title)
+    quiz.quiz_status = data.get("quiz_status", quiz.quiz_status)
+    quiz.quiz_level = data.get("quiz_level", quiz.quiz_level)
+    # Add any other fields here
+
+    quiz.save()
+    return Response({"message": "Quiz updated successfully!"}, status=200)
