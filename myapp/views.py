@@ -461,11 +461,10 @@ def attend_quiz(request):
     except Quiz.DoesNotExist:
         return Response({'error': 'Quiz not found.'}, status=404)
 
-
 @api_view(['POST'])
 def submit_quiz(request):
     username = request.data.get('username')
-    quiz_name = request.data.get('quizName')
+    quiz_name = request.data.get('quiz_name')   # unified snake_case
     answers = request.data.get('answers')
 
     if not username or not quiz_name or not answers:
@@ -484,20 +483,16 @@ def submit_quiz(request):
         total_questions = quiz_questions.count()
 
         for qq in quiz_questions:
-            question_id = qq.question.question_id
-            correct_answer = qq.question.correct_answer
+            question_id = str(qq.question.question_id)
+            correct_answer = qq.question.correct_answer.strip().lower()
 
-            user_answer = None
-            # Search the answer by questionId
-            for key, value in answers.items():
-                if str(key) == str(question_id):
-                    user_answer = value
-                    break
+            user_answer = answers.get(question_id, "").strip().lower()
 
-            if user_answer and user_answer.strip().lower() == correct_answer.strip().lower():
+            if user_answer == correct_answer:
                 score += 1
 
         return Response({'score': score, 'totalQuestions': total_questions})
 
     except Quiz.DoesNotExist:
         return Response({'error': 'Quiz not found.'}, status=404)
+
