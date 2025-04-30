@@ -1,0 +1,53 @@
+# version: '3.8'
+
+services:
+  # Frontend React app
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - HOST=0.0.0.0
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - backend  
+
+  # Backend Django app
+  backend:
+    build:
+      context: .  # Path to your Django app
+
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"  # Expose Django app on port 8000
+    env_file:
+      - ./myproject/.env
+    environment:
+      - DB_NAME=Capstone
+      - DB_USER=postgres
+      - DB_PASSWORD=1313
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db  # Wait for database to be ready
+
+  # Database (PostgreSQL)
+  db:
+    image: postgres:17  # Use official PostgreSQL image
+    environment:
+      POSTGRES_DB: Capstone
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1313
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persist data
+
+volumes:
+  postgres_data:  # Create a volume for persistent database storage

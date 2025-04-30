@@ -7,10 +7,6 @@ sqlparse==0.5.3
 tzdata==2025.2
 djangorestframework-simplejwt==5.5.0
 python-dotenv
-openai
-transformers
-torch
-huggingface_hub[hf_xet]
 dj-database-url
 gunicorn
 whitenoise
