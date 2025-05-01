@@ -1,0 +1,14 @@
+# ensure Docker Desktop install
+# ensure Docker running
+
+# in /myproject folder, create .env file for setting environment variable,
+# replace (api_key_here) with actual api key from together.ai
+
+TOGETHER_API_KEY=(api_key_here)
+ 
+
+# run both frontend, backend and db server
+docker-compose up --build
+
+# delete database for reset schema if necessary
+docker volume rm postgres_data
