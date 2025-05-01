@@ -227,6 +227,7 @@ def search_questions(request):
     serializer = QuestionListSerializer(questions, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 @api_view(['POST'])
 def create_quiz(request):
     data = request.data
@@ -235,8 +236,6 @@ def create_quiz(request):
     quiz_level = data.get("quizLevel")
     quiz_status = data.get("quizStatus", "draft")
     selected_questions = data.get("selectedQuestions", [])
-
-    print("Received selected_questions:", selected_questions)
 
     if not username or not quiz_title or not selected_questions:
         return Response({"error": "Missing required fields"}, status=400)
@@ -251,18 +250,21 @@ def create_quiz(request):
         total_marks = sum(int(q.get("score", 0)) for q in selected_questions)
 
         with connection.cursor() as cursor:
-            print(f"Teacher ID: {teacher_id}, Quiz Title: {quiz_title}, Quiz Level: {quiz_level}, Quiz Status: {quiz_status}, Total Score: {total_marks}")
-            cursor.execute(
-                "INSERT INTO quiz (teacher_id, quiz_title, quiz_level, quiz_status, total_marks, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
-                [teacher_id, quiz_title, quiz_level, quiz_status, total_marks]
-            )
-            quiz_id = cursor.lastrowid
+            # Insert the quiz and return its ID
+            cursor.execute("""
+                INSERT INTO quiz (teacher_id, quiz_title, quiz_level, quiz_status, total_marks, created_at)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                RETURNING quiz_id
+            """, [teacher_id, quiz_title, quiz_level, quiz_status, total_marks])
 
+            quiz_id = cursor.fetchone()[0]  # Get generated ID
+
+            # Insert each selected question
             for q in selected_questions:
                 question_id = q["questionId"]
                 score = int(q["score"])
                 cursor.execute(
-                    "INSERT INTO quiz_questions (quiz_id, question_id, score) VALUES (?, ?, ?)",
+                    "INSERT INTO quiz_questions (quiz_id, question_id, score) VALUES (%s, %s, %s)",
                     [quiz_id, question_id, score]
                 )
 
@@ -271,9 +273,8 @@ def create_quiz(request):
     except User.DoesNotExist:
         return Response({"error": "Invalid username"}, status=404)
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print("Error:", str(e))
         return Response({"error": str(e)}, status=500)
-
 
 
 @api_view(['PUT'])
@@ -460,6 +461,12 @@ def attend_quiz(request):
 
     except Quiz.DoesNotExist:
         return Response({'error': 'Quiz not found.'}, status=404)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
+
 
 @api_view(['POST'])
 def submit_quiz(request):
