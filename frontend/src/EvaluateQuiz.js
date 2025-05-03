@@ -193,5 +193,3 @@ const EvaluateQuiz = () => {
 };
 
 export default EvaluateQuiz;
-
-
