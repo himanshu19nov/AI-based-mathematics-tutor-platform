@@ -100,7 +100,7 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 #     }
 # }
 
-# DEVELOPMENT DATABASE setup for docker-compose
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -109,6 +109,7 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD', 'default_db_password'),  # Use environment variable for DB password
         'HOST': os.environ.get('DB_HOST', 'localhost'),  # Use environment variable for DB host
         'PORT': os.environ.get('DB_PORT', '5432'),  # Use environment variable for DB port
+
     }
 }
 

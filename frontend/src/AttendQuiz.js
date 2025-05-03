@@ -37,7 +37,7 @@ const AttendQuiz = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/quizzes/${quizName}?level=${quizLevel}&category=${quizCategory}`);
+      const response = await fetch(`http://localhost:5000/api/quizzes/${encodeURIComponent(quizName)}?level=${quizLevel}&category=${quizCategory}`);
       const data = await response.json();
 
       if (data.quiz && Array.isArray(data.quiz)) {
@@ -45,16 +45,19 @@ const AttendQuiz = () => {
         setQuizStarted(true);
         setCurrentQuestionIndex(0);
         setTimeLeft(120); // reset timer
+        setAnswers({});
+        setScore(null);
       } else {
-        alert("Quiz data not available for selected options.");
+        alert(data.error || "Quiz data not available for selected options.");
       }
     } catch (error) {
       console.error('Error fetching quiz:', error);
+      alert('Failed to load quiz.');
     }
   };
 
-  const handleAnswerChange = (questionIndex, selectedAnswer) => {
-    setAnswers({ ...answers, [questionIndex]: selectedAnswer });
+  const handleAnswerChange = (questionId, selectedAnswer) => {
+    setAnswers({ ...answers, [questionId]: selectedAnswer });
   };
 
   const handleNextQuestion = () => {
@@ -70,6 +73,8 @@ const AttendQuiz = () => {
   };
 
   const handleSubmitQuiz = async () => {
+    if (!quizData.length) return;
+
     try {
       const response = await fetch('http://localhost:5000/api/submit', {
         method: 'POST',
@@ -78,11 +83,16 @@ const AttendQuiz = () => {
       });
 
       const result = await response.json();
-      setScore(result.score);
-      alert(`Quiz Submitted! You scored ${result.score}/${result.totalQuestions}`);
+      if (response.ok) {
+        setScore(result.score);
+        alert(`Quiz Submitted! You scored ${result.score} out of ${result.totalQuestions}`);
+      } else {
+        alert(result.error || 'Error submitting quiz.');
+      }
       setQuizStarted(false);
     } catch (error) {
       console.error('Error submitting quiz:', error);
+      alert('Failed to submit quiz.');
     }
   };
 
@@ -154,19 +164,19 @@ const AttendQuiz = () => {
       ) : (
         <div className="quiz-questions">
           <div className="quiz-header">
-            <h2>{quizData[currentQuestionIndex].question}</h2>
+            <h2>{quizData[currentQuestionIndex]?.question}</h2>
             <div className="timer">Time Left: {timeLeft}s</div>
           </div>
 
           <div className="options">
-            {quizData[currentQuestionIndex].options.map((option, idx) => (
+            {quizData[currentQuestionIndex]?.options.map((option, idx) => (
               <label key={idx}>
                 <input
                   type="radio"
-                  name={`question-${currentQuestionIndex}`}
+                  name={`question-${quizData[currentQuestionIndex].questionId}`}
                   value={option}
-                  onChange={(e) => handleAnswerChange(currentQuestionIndex, e.target.value)}
-                  checked={answers[currentQuestionIndex] === option}
+                  onChange={(e) => handleAnswerChange(quizData[currentQuestionIndex].questionId, e.target.value)}
+                  checked={answers[quizData[currentQuestionIndex].questionId] === option}
                 />
                 {option}
               </label>

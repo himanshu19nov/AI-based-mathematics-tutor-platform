@@ -6,7 +6,8 @@ from .views import update_question
 from .views import delete_question
 from .views import ask_ai
 from .views import get_all_quizzes
-from .views import update_quiz_status
+from .views import update_quiz
+
 
 
 urlpatterns = [
@@ -26,5 +27,14 @@ urlpatterns = [
     path('api/questions/<int:question_id>/delete/', delete_question, name='delete_question'),
     path('api/ask', ask_ai, name='ask_ai'),
     path('api/list_quiz/', get_all_quizzes, name='get_all_quiz'),
-    path('api/quiz/<int:quiz_id>/status/', update_quiz_status, name='update_quiz_status'),
+    path('api/quiz/<int:quiz_id>/update/', update_quiz, name='update_quiz'),
+    path('api/attend_quiz', views.attend_quiz, name='attend_quiz'),
+    path('api/submit_quiz', views.submit_quiz, name='submit_quiz'),
+    path('api/questions/<int:question_id>/', views.update_question, name='update_question'),
+    path('api/quiz/<int:quiz_id>/publish/', views.publish_quiz, name='publish_quiz'),
+    path('api/quiz/<int:quiz_id>/delete/', views.delete_quiz, name='delete_quiz'),
+    path('api/view_result/<int:user_id>/', views.view_result, name='view_result'),
+    path('api/evaluate_quiz/', views.evaluate_quiz, name='evaluate_quiz'),
+
+
 ]

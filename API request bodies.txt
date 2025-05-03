@@ -71,3 +71,18 @@ Sample Response:
 {
   "answer": "The derivative of sin(x) is cos(x)."
 }
+
+
+list quiz 
+
+GET http://127.0.0.1:8000/api/list_quiz/
+
+update quiz
+
+PUT http://127.0.0.1:8000/api/quiz/1/update/
+
+{
+  "quiz_title": "Updated Quiz Title",
+  "quiz_status": "published",
+  "quiz_level": "year_6"
+}
