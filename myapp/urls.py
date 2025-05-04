@@ -35,6 +35,9 @@ urlpatterns = [
     path('api/quiz/<int:quiz_id>/delete/', views.delete_quiz, name='delete_quiz'),
     path('api/view_result/<int:user_id>/', views.view_result, name='view_result'),
     path('api/evaluate_quiz/', views.evaluate_quiz, name='evaluate_quiz'),
+    path('api/create_question_ai/', views.create_question_ai, name='create_question_ai'),
+    path('api/evaluate_quiz_ai/', views.evaluate_quiz_ai, name='evaluate_quiz_ai'),
+
 
 
 ]

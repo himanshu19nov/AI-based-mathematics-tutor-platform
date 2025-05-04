@@ -86,3 +86,29 @@ PUT http://127.0.0.1:8000/api/quiz/1/update/
   "quiz_status": "published",
   "quiz_level": "year_6"
 }
+
+
+http://localhost:8000/api/create_question_ai/
+Headers:
+
+Content-Type: application/json
+Body:
+{
+  "category": "Algebra",
+  "difficulty": "Medium",
+  "level": "Year 8"
+}
+
+http://localhost:8000/api/evaluate_quiz_ai/
+Headers:
+Content-Type: application/json
+Body:
+{
+  "question_text": "Solve for x: 2x + 4 = 10",
+  "student_answer": "3",
+  "correct_answer": "3"
+}
+
+
+
+
