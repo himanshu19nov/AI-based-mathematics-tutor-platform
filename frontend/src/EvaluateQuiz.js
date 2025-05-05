@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from 'axios';
 import "./styles/EvaluateQuiz.css";
+import {
+    fetchQuestions,
+    submitQuiz,
+    retryQuiz
+} from "./api/quizApi"; 
 
 const EvaluateQuiz = () => {
     const [quizLevel, setQuizLevel] = useState("");
@@ -9,6 +14,7 @@ const EvaluateQuiz = () => {
     const [questions, setQuestions] = useState([]);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [userAnswer, setUserAnswer] = useState("");
+    const [userAnswers, setUserAnswers] = useState([]);
     const [marks, setMarks] = useState([]);
     const [comments, setComments] = useState("");
     const [quizCompleted, setQuizCompleted] = useState(false);
@@ -17,14 +23,10 @@ const EvaluateQuiz = () => {
 
     useEffect(() => {
         if (quizName && quizLevel && username) {
-            const apiUrl = `http://localhost:5000/quiz/questions?quizName=${quizName}&quizLevel=${quizLevel}`;
-            console.log("API URL: ", apiUrl);  // Log to confirm the URL is correct
-            
-            axios.get(apiUrl)
+            fetchQuestions(quizName, quizLevel)
                 .then((response) => {
-                    console.log('API Response:', response);  // Log the full response
                     if (response.data && response.data.questions) {
-                        setQuestions(response.data.questions); // Set questions state
+                        setQuestions(response.data.questions);
                     } else {
                         console.error('No questions data in response');
                     }
@@ -33,11 +35,10 @@ const EvaluateQuiz = () => {
                     console.error('Error fetching quiz questions:', error);
                 });
         }
-    }, [quizName, quizLevel, username]);
-    
+    }, [quizName, quizLevel, username]);    
 
     const normalizeAnswer = (answer) => {
-        return answer.replace(/\s/g, "").toLowerCase(); // Remove spaces and convert to lowercase
+        return answer.replace(/\s/g, "").toLowerCase();
     };
 
     const handleAnswerSubmit = () => {
@@ -46,55 +47,51 @@ const EvaluateQuiz = () => {
             return;
         }
 
-        const correctAnswer = questions[currentQuestionIndex].answer; // Assuming the correct answer is in the 'answer' field
+        const correctAnswer = questions[currentQuestionIndex].answer;
         const isCorrect = normalizeAnswer(userAnswer) === normalizeAnswer(correctAnswer);
 
-        setMarks([...marks, isCorrect ? 1 : 0]);
-
-        // Provide feedback for the answer
+        setMarks(prev => [...prev, isCorrect ? 1 : 0]);
+        setUserAnswers(prev => [...prev, userAnswer]);
         setComments(isCorrect ? "Correct! Great job." : `Incorrect! The correct answer is: ${correctAnswer}`);
-
-        // Clear the input field
         setUserAnswer("");
 
-        // Move to the next question or finish the quiz
         if (currentQuestionIndex < questions.length - 1) {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
         } else {
             setQuizCompleted(true);
             setShowTryAgain(true);
-            const totalScore = marks.reduce((sum, mark) => sum + mark, 0) + (isCorrect ? 1 : 0); // Include current answer
-            const resultMessage = totalScore === questions.length ? "🎉 Well done, keep it up! 🎉" : "❌ Try again! ❌";
-            setResultMessage(resultMessage);
+            const totalScore = marks.reduce((sum, mark) => sum + mark, 0) + (isCorrect ? 1 : 0);
+            const finalMessage = totalScore === questions.length
+                ? " Well done, keep it up! "
+                : " Try again! ";
+            setResultMessage(finalMessage);
         }
     };
 
-    // Submit quiz results to the backend
     const handleSubmitQuiz = () => {
-        const answerSubmission = {
+        const submissionData = {
             username,
             quizName,
             quizLevel,
-            answers: questions.reduce((acc, question, index) => {
-                acc[question] = marks[index] === 1 ? question : ''; // For simplicity, we're just using question text
-                return acc;
-            }, {})
+            answers: questions.map((q, index) => ({
+                question: q.question,
+                userAnswer: userAnswers[index] || ""
+            }))
         };
-
-        axios.post('http://localhost:5000/quiz/submit', answerSubmission)
+    
+        submitQuiz(submissionData)
             .then((response) => {
-                const { totalScore, maxScore, resultMessage } = response.data;
-                setResultMessage(resultMessage);
+                const { resultMessage } = response.data;
+                setResultMessage(resultMessage || "Quiz submitted successfully!");
             })
             .catch((error) => {
                 console.error('Error submitting quiz:', error);
             });
     };
-
-    // Reset the quiz when "Try Again" is clicked
+    
     const handleTryAgain = () => {
         const retryData = { username, quizName, quizLevel };
-        axios.post('http://localhost:5000/quiz/retry', retryData)
+        retryQuiz(retryData)
             .then(() => {
                 setQuizLevel("");
                 setQuizName("");
@@ -111,7 +108,7 @@ const EvaluateQuiz = () => {
             .catch((error) => {
                 console.error('Error resetting quiz:', error);
             });
-    };
+    };    
 
     return (
         <div className="container">
@@ -174,8 +171,8 @@ const EvaluateQuiz = () => {
                             <textarea 
                                 className="textbox" 
                                 value={comments} 
-                                onChange={(e) => setComments(e.target.value)}
-                                placeholder="Enter comments (optional)"
+                                readOnly
+                                placeholder="Feedback will appear here"
                             ></textarea>
 
                             <div className="nav-buttons">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { fetchResultByUserId, submitEvaluation, fetchUsers } from "./api/resultApi";
 
 const ViewResult = () => {
   const [tab, setTab] = useState("individual");
@@ -9,43 +10,38 @@ const ViewResult = () => {
   const [viewingResult, setViewingResult] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [resultData, setResultData] = useState([]);
+  const [userId, setUserId] = useState("");
+  const [users, setUsers] = useState([]);
 
-  // Dummy API endpoint placeholders
-  const FETCH_RESULT_API = `/api/results/fetch`; // Replace with real GET endpoint
-  const SUBMIT_RESULT_API = `/api/results/submit`; // Replace with real POST/PUT endpoint
-
-  // Fetch result data on first load or when viewingResult becomes true
   useEffect(() => {
     if (viewingResult) {
-      axios
-        .get(FETCH_RESULT_API, {
-          params: {
-            username,
-            quiz,
-            level,
-          },
-        })
-        .then((res) => setResultData(res.data))
-        .catch((err) => {
-          console.error("Error fetching result:", err);
-          // Fallback dummy data
-          setResultData([
-            {
-              question: "What is 2 + 2?",
-              answer: "4",
-              mark: 3,
-              comments: "Good work",
-            },
-            {
-              question: "Capital of France?",
-              answer: "Paris",
-              mark: 5,
-              comments: "Excellent",
-            },
-          ]);
-        });
+      fetchResultByUserId(userId)
+        .then((data) => setResultData(data.results || data))
+        .catch((err) => console.error("Error fetching result:", err));
     }
   }, [viewingResult]);
+
+  useEffect(() => {
+    const getUsers = async () => {
+      try {
+        const data = await fetchUsers();
+        setUsers(data);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    };
+
+    getUsers();
+  }, []);
+
+  const handleUserSelect = (e) => {
+    const selectedId = e.target.value;
+    setUserId(selectedId);
+    const selectedUser = users.find(user => user.id.toString() === selectedId);
+    if (selectedUser) {
+      setUsername(selectedUser.username);
+    }
+  };
 
   const totalScore = resultData.reduce((acc, cur) => acc + (cur.mark || 0), 0);
 
@@ -56,12 +52,13 @@ const ViewResult = () => {
 
   const handleSubmit = async () => {
     try {
-      await axios.post(SUBMIT_RESULT_API, {
-        username,
-        quiz,
+      const payload = {
+        user_id: userId,
+        quiz_name: quiz,
         level,
         results: resultData,
-      });
+      };
+      await submitEvaluation(payload);
       alert("Evaluation submitted successfully!");
     } catch (error) {
       console.error("Submission error:", error);
@@ -200,12 +197,13 @@ const ViewResult = () => {
             </select>
 
             <label> Username: </label>
-            <select
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            >
-              <option value="Teacher">Teacher</option>
-              <option value="Student">Student</option>
+            <select value={userId} onChange={handleUserSelect}>
+              <option value="">Select a user</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.username}
+                </option>
+              ))}
             </select>
           </div>
 
