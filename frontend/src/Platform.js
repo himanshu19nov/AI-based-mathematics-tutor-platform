@@ -72,7 +72,7 @@ function App() {
             className={`sidebar-button ${selectedOption === 'userRegistration' ? 'active' : ''}`}
             onClick={() => handleMenuClick('userRegistration')}
           >
-            👤 User Registration
+            👤 User Management
           </div>
           ) : null}
           {role === 'teacher' ? (

@@ -18,8 +18,8 @@ const AIChatbox = () => {
     setUserMessage(e.target.value);
   };
 
-  const handleToneChange = (e) => setTone(e.target.value);
-  const handleStyleChange = (e) => setStyle(e.target.value);
+  // const handleToneChange = (e) => setTone(e.target.value);
+  // const handleStyleChange = (e) => setStyle(e.target.value);
 
   // Function to send user message to the Django backend and get AI response
   const sendMessage = async () => {
@@ -33,9 +33,23 @@ const AIChatbox = () => {
     try {
       setLoading(true);  // Set loading state to true while waiting for the response
       const apiUrl = process.env.REACT_APP_API_URL;
+
+      // ✅ Limit to last 5 turns (5 user + 5 AI messages)
+      const lastTurns = newChatHistory.slice(-10);
+      const formattedHistory = lastTurns
+        .map(msg => `${msg.type === 'user' ? 'User' : 'AI'}: ${msg.text}`)
+        .join('\n');
+
+
+
       // Send the user message to the Django backend API
       // const response = await axios.post('http://localhost:8000/api/ask', { question: userMessage });
-      const response = await axios.post(`${apiUrl}/api/ask`, { question: userMessage, tone, style });
+      const response = await axios.post(`${apiUrl}/api/ask`, 
+        { question: userMessage, 
+          tone, 
+          style, 
+          history: formattedHistory 
+        });
       
       const aiAnswer = response.data.answer || "Sorry, I couldn't understand your question.";
 
