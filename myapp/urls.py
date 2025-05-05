@@ -6,7 +6,7 @@ from .views import update_question
 from .views import delete_question
 from .views import ask_ai
 from .views import get_all_quizzes
-from .views import update_quiz_status
+from .views import update_quiz
 
 
 

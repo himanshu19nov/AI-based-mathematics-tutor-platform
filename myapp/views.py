@@ -348,6 +348,23 @@ def ask_ai(request):
         return Response({'error': 'Together API key not set'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     question = request.data.get("question")
+    tone = request.data.get("tone", "neutral")
+    style = request.data.get("style", "concise")
+    history = request.data.get("history", "")
+
+    TONE_DESCRIPTIONS = {
+        "neutral": "Maintain a balanced and objective tone.",
+        "friendly": "Use a warm and approachable tone as if you're speaking to a friend.",
+        "professional": "Use formal and respectful language suitable for a professional setting.",
+        "humorous": "Use light-hearted and witty language to make the response fun."
+    }
+
+    STYLE_DESCRIPTIONS = {
+        "concise": "Be brief and to the point, focusing only on the essential information.",
+        "detailed": "Provide a thorough explanation with relevant examples and elaboration.",
+        "creative": "Think outside the box and present the response in an imaginative way."
+    }
+
     if not question:
         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -359,16 +376,69 @@ def ask_ai(request):
             "Content-Type": "application/json"
         }
 
-        # Inject default context into the user prompt (simple RAG)
-        user_prompt = f"{default_context}\n\nQuestion: {question}"
+        # Construct the tone/style instruction
+
+        tone_instruction = TONE_DESCRIPTIONS.get(tone, "")
+        style_instruction = STYLE_DESCRIPTIONS.get(style, "")
+        personal_instruction = f"{tone_instruction} {style_instruction}".strip()
+
+
+        # Start with system message
+        messages = [
+            {"role": "system", "content": f"You are a helpful math tutor. Use the provided context to assist the student. {personal_instruction}"}
+        ]
+
+        # Clean and structure the message history
+        def clean_history(raw_text):
+            lines = raw_text.strip().split('\n')
+            result = []
+            last_role = None
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("User:"):
+                    role = "user"
+                    content = line[len("User:"):].strip()
+                elif line.startswith("AI:"):
+                    role = "assistant"
+                    content = line[len("AI:"):].strip()
+                else:
+                    continue
+
+                if content.lower().startswith("sorry, there was an error"):
+                    continue
+                if role == last_role:
+                    continue
+
+                result.append({"role": role, "content": content})
+                last_role = role
+
+            # Keep only the last 5 turns = 10 messages max
+            return result[-10:]
+
+        cleaned_history = clean_history(history)
+
+        messages.extend(cleaned_history)
+        # messages.append({"role": "user", "content": question.strip()})
+        if messages[-1]["role"] != "user":
+            messages.append({"role": "user", "content": question.strip()})
+
+
+
+        print(messages)
+
+        # # Inject default context into the user prompt (simple RAG)
+        # user_prompt = f"{default_context}\n\nQuestion: {question}"
 
         payload = {
             # "model": "togethercomputer/llama-2-7b-chat",
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "messages": [
-                {"role": "system", "content": "You are a helpful math tutor. Use the provided context to assist the student."},
-                {"role": "user", "content": user_prompt}
-            ],
+            # "messages": [
+            #     {"role": "system", "content": f"You are a helpful math tutor. Use the provided context to assist the student. {personal_instruction}"},
+            #     {"role": "user", "content": user_prompt}
+            # ],
+            "messages": messages,
             "temperature": 0.7,
             "max_tokens": 512,
             "top_p": 0.95,
@@ -679,7 +749,7 @@ def get_user_by_username(request, username):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
-        @api_view(['GET'])
+@api_view(['GET'])
 def search_users(request):
     query = request.GET.get('query', '')
     users = User.objects.filter(username__icontains=query)

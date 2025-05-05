@@ -72,7 +72,7 @@ function App() {
             className={`sidebar-button ${selectedOption === 'userRegistration' ? 'active' : ''}`}
             onClick={() => handleMenuClick('userRegistration')}
           >
-            👤 User Registration
+            👤 User Management
           </div>
           ) : null}
           {role === 'teacher' ? (
@@ -104,7 +104,7 @@ function App() {
             className={`sidebar-button ${selectedOption === 'chatbox' ? 'active' : ''}`}
             onClick={() => handleMenuClick('chatbox')}
           >
-            🤖 Q&A Chatbox
+            🤖 AI Tutoring
           </div>
           ) : null}
           {role === 'student' || role === 'teacher' || role === 'parent' ? (
