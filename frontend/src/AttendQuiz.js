@@ -12,9 +12,9 @@ const AttendQuiz = () => {
   const [answers, setAnswers] = useState({});
   const [quizStarted, setQuizStarted] = useState(false);
   const [score, setScore] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
+  const [timeLeft, setTimeLeft] = useState(120); 
 
-  const quizNameOptions = ['Math Quiz', 'Science Quiz'];
+  const quizNameOptions = ['Math Quiz'];
 
   const categoryOptions = {
     'Math Quiz': ['Trigonometry', 'Arithmetic', 'Geometry', 'Algebra', 'Calculus'],
@@ -31,13 +31,13 @@ const AttendQuiz = () => {
   }, [quizStarted, timeLeft]);
 
   const handleStartQuiz = async () => {
-    if (!quizName || !quizLevel || !quizCategory || !username) {
+    if (!quizName || !quizLevel || !quizCategory) {
       alert("Please fill all required fields before starting the quiz.");
       return;
-    }
+    }    
 
     try {
-      const response = await fetch(`http://localhost:5000/api/quizzes/${quizName}?level=${quizLevel}&category=${quizCategory}`);
+      const response = await fetch(`http://localhost:8000/api/quizzes/${quizName}?level=${quizLevel}&category=${quizCategory}`);
       const data = await response.json();
 
       if (data.quiz && Array.isArray(data.quiz)) {
@@ -71,7 +71,7 @@ const AttendQuiz = () => {
 
   const handleSubmitQuiz = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/submit', {
+      const response = await fetch('http://localhost:8000/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, quizName, answers })
@@ -85,6 +85,7 @@ const AttendQuiz = () => {
       console.error('Error submitting quiz:', error);
     }
   };
+  
 
   const renderQuestionNumbers = () => {
     return quizData.map((_, index) => (
@@ -102,15 +103,6 @@ const AttendQuiz = () => {
     <div className="attend-quiz-container">
       {!quizStarted ? (
         <div className="quiz-setup">
-          <div className="dropdown-container">
-            <label>Username</label>
-            <input
-              type="text"
-              value={username}
-              placeholder="Enter your username"
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
 
           <div className="dropdown-container">
             <label>Quiz Level</label>
@@ -153,40 +145,47 @@ const AttendQuiz = () => {
         </div>
       ) : (
         <div className="quiz-questions">
+          {quizData.length === 0 || !quizData[currentQuestionIndex] ? (
+          <p>Loading quiz questions...</p>
+        ) : (
+        <>
           <div className="quiz-header">
             <h2>{quizData[currentQuestionIndex].question}</h2>
             <div className="timer">Time Left: {timeLeft}s</div>
           </div>
 
           <div className="options">
-            {quizData[currentQuestionIndex].options.map((option, idx) => (
-              <label key={idx}>
-                <input
-                  type="radio"
-                  name={`question-${currentQuestionIndex}`}
-                  value={option}
-                  onChange={(e) => handleAnswerChange(currentQuestionIndex, e.target.value)}
-                  checked={answers[currentQuestionIndex] === option}
-                />
-                {option}
-              </label>
-            ))}
-          </div>
+           {quizData[currentQuestionIndex].options.map((option, idx) => (
+            <label key={idx}>
+            <input
+              type="radio"
+              name={`question-${currentQuestionIndex}`}
+              value={option}
+              onChange={(e) => handleAnswerChange(currentQuestionIndex, e.target.value)}
+              checked={answers[currentQuestionIndex] === option}
+            />
+            {option}
+          </label>
+        ))}
+      </div>
 
-          <div className="question-navigation">
-            <button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>Previous</button>
-            {currentQuestionIndex === quizData.length - 1 ? (
-              <button onClick={handleSubmitQuiz}>Submit</button>
-            ) : (
-              <button onClick={handleNextQuestion}>Next</button>
-            )}
-          </div>
+      <div className="question-navigation">
+        <button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>Previous</button>
+        {currentQuestionIndex === quizData.length - 1 ? (
+          <button onClick={handleSubmitQuiz}>Submit</button>
+        ) : (
+          <button onClick={handleNextQuestion}>Next</button>
+        )}
+      </div>
 
-          <div className="question-numbers">
-            <h3>Select Question:</h3>
-            {renderQuestionNumbers()}
-          </div>
+        <div className="question-numbers">
+        <h3>Select Question:</h3>
+        {renderQuestionNumbers()}
         </div>
+        </>
+        )}
+      </div>
+
       )}
     </div>
   );

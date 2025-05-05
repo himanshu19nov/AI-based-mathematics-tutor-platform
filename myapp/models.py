@@ -129,6 +129,7 @@ class StudentExam(models.Model):
         db_table = 'Student_Exams'
 
 
+
 class Answer(models.Model):
     answer_id = models.AutoField(primary_key=True)
     student_exam = models.ForeignKey(StudentExam, on_delete=models.CASCADE, null=True, blank=True)
@@ -136,8 +137,13 @@ class Answer(models.Model):
     student_answer = models.CharField(max_length=255)
     is_correct = models.BooleanField(default=False)
 
+    # ✅ Add these two fields:
+    student_mark = models.IntegerField(null=True, blank=True)
+    teacher_comment = models.TextField(null=True, blank=True)
+
     class Meta:
         db_table = 'Answers'
+
 
 
 class AIAnalysis(models.Model):

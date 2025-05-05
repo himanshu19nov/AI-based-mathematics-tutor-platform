@@ -9,6 +9,7 @@ from .views import get_all_quizzes
 from .views import update_quiz_status
 
 
+
 urlpatterns = [
     path('', views.home, name='home'),
     path('api/health/', views.health_check, name='health_check'),
@@ -26,5 +27,20 @@ urlpatterns = [
     path('api/questions/<int:question_id>/delete/', delete_question, name='delete_question'),
     path('api/ask', ask_ai, name='ask_ai'),
     path('api/list_quiz/', get_all_quizzes, name='get_all_quiz'),
-    path('api/quiz/<int:quiz_id>/status/', update_quiz_status, name='update_quiz_status'),
+    path('api/quiz/<int:quiz_id>/update/', update_quiz, name='update_quiz'),
+    path('api/attend_quiz', views.attend_quiz, name='attend_quiz'),
+    path('api/submit_quiz', views.submit_quiz, name='submit_quiz'),
+    path('api/questions/<int:question_id>/', views.update_question, name='update_question'),
+    path('api/quiz/<int:quiz_id>/publish/', views.publish_quiz, name='publish_quiz'),
+    path('api/quiz/<int:quiz_id>/delete/', views.delete_quiz, name='delete_quiz'),
+    path('api/view_result/<int:user_id>/', views.view_result, name='view_result'),
+    path('api/evaluate_quiz/', views.evaluate_quiz, name='evaluate_quiz'),
+    path('api/user/getUser/<str:username>/', views.get_user_by_username),
+    path('api/user/search/', views.search_users),
+    path('api/parent/<str:parent_username>/students/', views.get_assigned_students),
+    path('api/parent/<str:parent_username>/assign/', views.assign_student),
+    path('api/parent/<str:parent_username>/remove/<str:student_username>/', views.remove_assigned_student),
+
+
+
 ]
