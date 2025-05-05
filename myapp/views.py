@@ -40,23 +40,10 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 import os
-import os
-import requests
-import traceback
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from django.views.decorators.csrf import csrf_exempt
-from .models import Question
-import os
-import requests
-import traceback
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from django.views.decorators.csrf import csrf_exempt
 
 from .serializers import QuizListSerializer
+from .models import ParentStudentMapping
+
 
 # # Load model globally once
 # qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
@@ -673,132 +660,79 @@ def evaluate_quiz(request):
         import traceback
         traceback.print_exc()
         return Response({'error': str(e)}, status=500)
-@csrf_exempt
-@api_view(['POST'])
-def create_question_ai(request):
+
+# Used for user registration
+
+@api_view(['GET'])
+def get_user_by_username(request, username):
     try:
-        TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
-        if not TOGETHER_API_KEY:
-            return Response({"error": "Together API key not set."}, status=500)
+        user = User.objects.get(username=username)
+        return Response({'user': {
+            'username': user.username,
+            'email': user.email,
+            'firstName': user.firstName,
+            'lastName': user.lastName,
+            'academicLevel': user.academicLevel,
+            'userStatus': user.userStatus,
+            'role': user.role
+        }})
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
 
-        category = request.data.get("category")
-        difficulty = request.data.get("difficulty")
-        level = request.data.get("level", "Year 8")
+        @api_view(['GET'])
+def search_users(request):
+    query = request.GET.get('query', '')
+    users = User.objects.filter(username__icontains=query)
+    return Response({'users': list(users.values())})
 
-        if not category or not difficulty:
-            return Response({"error": "Missing category or difficulty."}, status=400)
+#  Get assigned students for a parent
 
-        # Prompt to generate the question in structured format
-        prompt = (
-            f"Generate one {difficulty.lower()} level {category.lower()} question for a {level} student. "
-            f"Return the response as JSON with keys: 'question_text', 'answers' (list of 4), and 'correct_answer'."
-        )
-
-        headers = {
-            "Authorization": f"Bearer {TOGETHER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
-        payload = {
-            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "messages": [
-                {"role": "system", "content": "You are a helpful AI that creates math questions in JSON format only."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.7,
-            "top_p": 0.95,
-            "max_tokens": 512
-        }
-
-        # Call Together.ai API
-        response = requests.post("https://api.together.xyz/v1/chat/completions", headers=headers, json=payload)
-        result = response.json()
-
-        ai_content = result["choices"][0]["message"]["content"]
-
-        # Attempt to safely evaluate the JSON response
-        import json
-        try:
-            question_data = json.loads(ai_content)
-        except json.JSONDecodeError:
-            return Response({"error": "AI did not return valid JSON.", "raw": ai_content}, status=502)
-
-        # Save to DB using your existing Question model
-        new_question = Question.objects.create(
-            question_text=question_data["question_text"],
-            correct_answer=question_data["correct_answer"],
-            category=category,
-            difficulty_level=difficulty,
-            teacher_id=0  # Replace or remove if needed
-        )
-
-        return Response({
-            "message": "AI-generated question created successfully.",
-            "question": {
-                "question_id": new_question.question_id,
-                "question_text": new_question.question_text,
-                "correct_answer": new_question.correct_answer,
-                "category": new_question.category,
-                "difficulty": new_question.difficulty_level
-            }
-        }, status=201)
-
-    except Exception as e:
-        traceback.print_exc()
-        return Response({"error": "Something went wrong", "details": str(e)}, status=500)
-
-
-@csrf_exempt
-@api_view(['POST'])
-def evaluate_quiz_ai(request):
+@api_view(['GET'])
+def get_assigned_students(request, username):
     try:
-        TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
-        if not TOGETHER_API_KEY:
-            return Response({"error": "Together API key not set."}, status=500)
+        parent = User.objects.get(username=username, role='parent')
+        mappings = ParentStudentMapping.objects.filter(parent=parent)
+        students = [{"username": m.student.username, "fullName": m.student.fullName} for m in mappings]
+        return Response({"students": students})
+    except User.DoesNotExist:
+        return Response({"error": "Parent not found"}, status=404)
 
-        question_text = request.data.get("question_text")
-        student_answer = request.data.get("student_answer")
-        correct_answer = request.data.get("correct_answer")
+# Assign a student to a parent
 
-        if not all([question_text, student_answer, correct_answer]):
-            return Response({"error": "Missing required fields."}, status=400)
+@api_view(['POST'])
+def assign_student(request, username):
+    student_username = request.data.get("student_username")
+    print(f"Trying to assign student {student_username} to parent {username}")
 
-        prompt = (
-            f"Question: {question_text}\n"
-            f"Student Answer: {student_answer}\n"
-            f"Correct Answer: {correct_answer}\n"
-            f"Evaluate the student’s answer. Return a JSON object with: "
-            f"'is_correct' (true/false), 'score' (0 or 1), and 'feedback' (string)."
-        )
+    try:
+        parent = User.objects.get(username=username, role='parent')
+        student = User.objects.get(username=student_username, role='student')
 
-        headers = {
-            "Authorization": f"Bearer {TOGETHER_API_KEY}",
-            "Content-Type": "application/json"
-        }
+        if ParentStudentMapping.objects.filter(parent=parent, student=student).exists():
+            return Response({"message": "Student already assigned to this parent."})
 
-        payload = {
-            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "messages": [
-                {"role": "system", "content": "You are a helpful math tutor. Respond only in JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.5,
-            "top_p": 0.9,
-            "max_tokens": 256
-        }
-
-        response = requests.post("https://api.together.xyz/v1/chat/completions", headers=headers, json=payload)
-        result = response.json()
-        ai_content = result["choices"][0]["message"]["content"]
-
-        import json
-        try:
-            evaluation = json.loads(ai_content)
-        except json.JSONDecodeError:
-            return Response({"error": "AI returned invalid JSON.", "raw": ai_content}, status=502)
-
-        return Response(evaluation, status=200)
-
+        ParentStudentMapping.objects.create(parent=parent, student=student)
+        return Response({"message": f"{student.username} assigned to {parent.username}."})
     except Exception as e:
-        traceback.print_exc()
-        return Response({"error": "Something went wrong", "details": str(e)}, status=500)
+        print("Error during assignment:", str(e))  # Log the real cause
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['DELETE'])
+def remove_assigned_student(request, parent_username, student_username):
+    try:
+        parent = User.objects.get(username=parent_username, role='parent')
+        student = User.objects.get(username=student_username, role='student')
+
+        mapping = ParentStudentMapping.objects.filter(parent=parent, student=student).first()
+
+        if mapping:
+            mapping.delete()
+            return Response({'message': f'Student {student_username} removed from parent {parent_username}.'}, status=200)
+        else:
+            return Response({'message': 'Mapping does not exist.'}, status=404)
+
+    except User.DoesNotExist:
+        return Response({'message': 'Parent or student not found.'}, status=404)
+    except Exception as e:
+        return Response({'message': f'Error: {str(e)}'}, status=500)

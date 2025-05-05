@@ -18,6 +18,14 @@ const UserRegistration = () => {
   const [mode, setMode] = useState('create');
   const [searchQuery, setSearchQuery] = useState('');
   const [message, setMessage] = useState('');
+  const [parents, setParents] = useState([]);
+  const [selectedParent, setSelectedParent] = useState('');
+  const [studentToAssign, setStudentToAssign] = useState('');
+  const [assignedStudents, setAssignedStudents] = useState([]);
+  const [userAssignments, setUserAssignments] = useState({});
+  const [userExists, setUserExists] = useState(false);
+
+
 
   const academicOptions = [
     'Kindergarten', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5',
@@ -28,11 +36,38 @@ const UserRegistration = () => {
     fetchUsers();
   }, []);
 
+  const loadParents = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/api/users/`);
+      const parentUsers = response.data.users.filter(u => u.role === 'parent');
+      setParents(parentUsers);
+    } catch (error) {
+      setMessage('Failed to load parents!');
+    }
+  };
+  
+  useEffect(() => {
+    if (mode === 'assign') {
+      loadParents();
+      setAssignedStudents([]);
+      setStudentToAssign('');
+      setSelectedParent('');
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (selectedParent) {
+      fetchAssignedStudents(selectedParent);
+    }
+  }, [selectedParent]);
+  
+
   const fetchUsers = async () => {
     try {
       // const response = await axios.get('http://localhost:8000/api/user/listAll');
-      const response = await axios.get(`${apiUrl}/api/user/listAll`);
-      setUsers(response.data.users);
+      const response = await axios.get(`${apiUrl}/api/users/`);
+      const fetchedUsers = response.data.users || [];
+      setUsers(Array.isArray(fetchedUsers) ? fetchedUsers : []);
     } catch (error) {
       setMessage('Failed to load users!');
     }
@@ -96,26 +131,125 @@ const UserRegistration = () => {
         setFirstName(user.firstName);
         setLastName(user.lastName);
         setEmail(user.email);
-        setAcademicLevel(user.academicLevel);
-        setUserStatus(user.userStatus);
-        setMessage('User data loaded successfully!');
-      } else {
-        setMessage('Username doesn\'t exist');
+        // Safer parsing for academicLevel
+      let academic = user.academicLevel;
+
+      try {
+        // If it's a stringified JSON array
+        if (typeof academic === 'string') {
+          academic = JSON.parse(academic);
+        }
+
+        // Clean strings inside the array
+        if (Array.isArray(academic)) {
+          academic = academic.map(item => {
+            if (typeof item === 'string') {
+              return item.replace(/[\[\]'"\\]/g, '').trim();
+            }
+            return item;
+          });
+        }
+
+        setAcademicLevel(Array.isArray(academic) ? academic : []);
+      } catch (e) {
+        // Fallback if anything fails during parsing
+        setAcademicLevel([]);
       }
-    } catch (error) {
-      setMessage('Username doesn\'t exist');
+
+      setUserStatus(user.userStatus);
+      setUserExists(true); 
+      setMessage('User data loaded successfully!');
+    } else {
+      setUserExists(false); 
+      setMessage("Username doesn't exist");
     }
-  };
+  } catch (error) {
+    setUserExists(false); 
+    setMessage("Username doesn't exist");
+  }
+};
 
   const handleSearch = async () => {
     try {
       // const response = await axios.get(`http://localhost:8000/api/user/search?query=${searchQuery}`);
       const response = await axios.get(`${apiUrl}/api/user/search?query=${searchQuery}`);
-      setUsers(response.data.users);
+      const userList = response.data.users;
+      setUsers(userList);
+
+      const assignments = {};
+      for (const user of userList) {
+        if (user.role === 'parent') {
+          try {
+            const res = await axios.get(`${apiUrl}/api/parent/${user.username}/students/`);
+            assignments[user.username] = res.data.students.map(s => s.username).join(', ');
+          }   catch {
+            assignments[user.username] = '';
+          }
+      }
+    }
+
+    setUserAssignments(assignments);
+  } catch (error) {
+    setMessage('Search failed!');
+  }
+};
+
+  const fetchAssignedStudents = async (parentUsername) => {
+    try {
+      const response = await axios.get(`${apiUrl}/api/parent/${parentUsername}/students/`);
+      setAssignedStudents(response.data.students);
     } catch (error) {
-      setMessage('Search failed!');
+      setAssignedStudents([]);
     }
   };
+
+  const handleAssignStudent = async () => {
+    if (!selectedParent || !studentToAssign) {
+      setMessage('Please select parent and enter student username.');
+      return;
+    }
+  
+    try {
+      // Assign student
+      await axios.post(`${apiUrl}/api/parent/${selectedParent}/assign/`, {
+        student_username: studentToAssign
+      });
+  
+      setMessage('Student assigned!');
+      setStudentToAssign('');
+      fetchAssignedStudents(selectedParent);
+  
+      // 🔁 Refresh userAssignments so table updates immediately
+      try {
+        const res = await axios.get(`${apiUrl}/api/parent/${selectedParent}/students/`);
+        const updatedStudents = res.data.students.map(s => s.username).join(', ');
+        setUserAssignments(prevAssignments => ({
+          ...prevAssignments,
+          [selectedParent]: updatedStudents
+        }));
+      } catch (error) {
+        setUserAssignments(prevAssignments => ({
+          ...prevAssignments,
+          [selectedParent]: ''
+        }));
+      }
+  
+    } catch (error) {
+      setMessage('Failed to assign student!');
+    }
+  };
+  
+
+  const handleRemoveStudent = async (studentUsername) => {
+    try {
+      await axios.delete(`${apiUrl}/api/parent/${selectedParent}/remove/${studentUsername}/`);
+      setMessage('Student removed!');
+      fetchAssignedStudents(selectedParent);
+    } catch (error) {
+      setMessage('Failed to remove student!');
+    }
+  };
+  
 
   return (
     <div className="user-registration">
@@ -123,6 +257,7 @@ const UserRegistration = () => {
         <button onClick={() => setMode('create')} className={`mode-button ${mode === 'create' ? 'active' : ''}`}>Create User</button>
         <button onClick={() => setMode('modify')} className={`mode-button ${mode === 'modify' ? 'active' : ''}`}>Modify User</button>
         <button onClick={() => setMode('search')} className={`mode-button ${mode === 'search' ? 'active' : ''}`}>Search</button>
+        <button onClick={() => setMode('assign')} className={`mode-button ${mode === 'assign' ? 'active' : ''}`}>Assign Students</button>
       </div>
 
       {mode === 'create' && (
@@ -178,7 +313,7 @@ const UserRegistration = () => {
           </div>
           <button className="submit-button" onClick={handleFetchUser}>Select</button>
 
-          {role && (
+          {userExists && (
             <>
               <div className="form-field">
                 <label>Role</label>
@@ -248,24 +383,76 @@ const UserRegistration = () => {
                 <th>Email</th>
                 <th>Academic Level</th>
                 <th>Status</th>
+                <th>Assigned Students</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((user, index) => (
-                <tr key={index}>
-                  <td>{user.username}</td>
-                  <td>{user.role}</td>
-                  <td>{user.firstName}</td>
-                  <td>{user.lastName}</td>
-                  <td>{user.email}</td>
-                  <td>{user.academicLevel.join(', ')}</td>
-                  <td>{user.userStatus}</td>
+              {users && users.length > 0 ? (
+                users.map((user, index) => (
+                  <tr key={index}>
+                    <td>{user.username}</td>
+                    <td>{user.role}</td>
+                    <td>{user.firstName}</td>
+                    <td>{user.lastName}</td>
+                    <td>{user.email}</td>
+                    <td>
+                    {Array.isArray(user.academicLevel)
+                    ? user.academicLevel.join(', ')
+                    : typeof user.academicLevel === 'string'
+                    ? user.academicLevel
+                    : ''}
+                    </td>
+                    <td>{user.userStatus}</td>
+                    <td>{user.role === 'parent' ? userAssignments[user.username] || '' : ''}</td>
+                  </tr>
+                  ))
+                 ) : (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center' }}>No users found</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       )}
+
+    {mode === 'assign' && (
+      <div className="form-container">
+        <div className="form-field">
+          <label>Select Parent</label>
+            <select value={selectedParent} onChange={(e) => setSelectedParent(e.target.value)}>
+            <option value="">-- Select Parent --</option>
+              {parents.map((parent, idx) => (
+              <option key={idx} value={parent.username}>{parent.username}</option>
+            ))}
+            </select>
+        </div>
+
+      {selectedParent && (
+        <>
+        <div className="form-field">
+          <label>Assign Student Username</label>
+          <input type="text" value={studentToAssign} onChange={(e) => setStudentToAssign(e.target.value)} placeholder="Enter student username" />
+          <button className="submit-button" onClick={handleAssignStudent}>Assign Student</button>
+        </div>
+
+        <div className="assigned-students-container">
+          <h3>Assigned Students:</h3>
+          <ul className="assigned-students">
+            {assignedStudents.map((s, i) => (
+              <li key={i}>
+                {s.username} ({s.fullName})
+                <button onClick={() => handleRemoveStudent(s.username)} style={{ marginLeft: '10px' }}>❌ Remove</button>
+              </li>
+          ))}
+          </ul>
+        </div>
+
+        </>
+      )}
+      </div>
+)}
+
 
       {message && <div className="message">{message}</div>}
     </div>

@@ -12,9 +12,9 @@ const AttendQuiz = () => {
   const [answers, setAnswers] = useState({});
   const [quizStarted, setQuizStarted] = useState(false);
   const [score, setScore] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
+  const [timeLeft, setTimeLeft] = useState(120); 
 
-  const quizNameOptions = ['Math Quiz', 'Science Quiz'];
+  const quizNameOptions = ['Math Quiz'];
 
   const categoryOptions = {
     'Math Quiz': ['Trigonometry', 'Arithmetic', 'Geometry', 'Algebra', 'Calculus'],
@@ -31,13 +31,13 @@ const AttendQuiz = () => {
   }, [quizStarted, timeLeft]);
 
   const handleStartQuiz = async () => {
-    if (!quizName || !quizLevel || !quizCategory || !username) {
+    if (!quizName || !quizLevel || !quizCategory) {
       alert("Please fill all required fields before starting the quiz.");
       return;
-    }
+    }    
 
     try {
-      const response = await fetch(`http://localhost:5000/api/quizzes/${encodeURIComponent(quizName)}?level=${quizLevel}&category=${quizCategory}`);
+      const response = await fetch(`http://localhost:8000/api/quizzes/${quizName}?level=${quizLevel}&category=${quizCategory}`);
       const data = await response.json();
 
       if (data.quiz && Array.isArray(data.quiz)) {
@@ -45,19 +45,16 @@ const AttendQuiz = () => {
         setQuizStarted(true);
         setCurrentQuestionIndex(0);
         setTimeLeft(120); // reset timer
-        setAnswers({});
-        setScore(null);
       } else {
-        alert(data.error || "Quiz data not available for selected options.");
+        alert("Quiz data not available for selected options.");
       }
     } catch (error) {
       console.error('Error fetching quiz:', error);
-      alert('Failed to load quiz.');
     }
   };
 
-  const handleAnswerChange = (questionId, selectedAnswer) => {
-    setAnswers({ ...answers, [questionId]: selectedAnswer });
+  const handleAnswerChange = (questionIndex, selectedAnswer) => {
+    setAnswers({ ...answers, [questionIndex]: selectedAnswer });
   };
 
   const handleNextQuestion = () => {
@@ -73,28 +70,22 @@ const AttendQuiz = () => {
   };
 
   const handleSubmitQuiz = async () => {
-    if (!quizData.length) return;
-
     try {
-      const response = await fetch('http://localhost:5000/api/submit', {
+      const response = await fetch('http://localhost:8000/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, quizName, answers })
       });
 
       const result = await response.json();
-      if (response.ok) {
-        setScore(result.score);
-        alert(`Quiz Submitted! You scored ${result.score} out of ${result.totalQuestions}`);
-      } else {
-        alert(result.error || 'Error submitting quiz.');
-      }
+      setScore(result.score);
+      alert(`Quiz Submitted! You scored ${result.score}/${result.totalQuestions}`);
       setQuizStarted(false);
     } catch (error) {
       console.error('Error submitting quiz:', error);
-      alert('Failed to submit quiz.');
     }
   };
+  
 
   const renderQuestionNumbers = () => {
     return quizData.map((_, index) => (
@@ -112,15 +103,6 @@ const AttendQuiz = () => {
     <div className="attend-quiz-container">
       {!quizStarted ? (
         <div className="quiz-setup">
-          <div className="dropdown-container">
-            <label>Username</label>
-            <input
-              type="text"
-              value={username}
-              placeholder="Enter your username"
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
 
           <div className="dropdown-container">
             <label>Quiz Level</label>
@@ -163,40 +145,47 @@ const AttendQuiz = () => {
         </div>
       ) : (
         <div className="quiz-questions">
+          {quizData.length === 0 || !quizData[currentQuestionIndex] ? (
+          <p>Loading quiz questions...</p>
+        ) : (
+        <>
           <div className="quiz-header">
-            <h2>{quizData[currentQuestionIndex]?.question}</h2>
+            <h2>{quizData[currentQuestionIndex].question}</h2>
             <div className="timer">Time Left: {timeLeft}s</div>
           </div>
 
           <div className="options">
-            {quizData[currentQuestionIndex]?.options.map((option, idx) => (
-              <label key={idx}>
-                <input
-                  type="radio"
-                  name={`question-${quizData[currentQuestionIndex].questionId}`}
-                  value={option}
-                  onChange={(e) => handleAnswerChange(quizData[currentQuestionIndex].questionId, e.target.value)}
-                  checked={answers[quizData[currentQuestionIndex].questionId] === option}
-                />
-                {option}
-              </label>
-            ))}
-          </div>
+           {quizData[currentQuestionIndex].options.map((option, idx) => (
+            <label key={idx}>
+            <input
+              type="radio"
+              name={`question-${currentQuestionIndex}`}
+              value={option}
+              onChange={(e) => handleAnswerChange(currentQuestionIndex, e.target.value)}
+              checked={answers[currentQuestionIndex] === option}
+            />
+            {option}
+          </label>
+        ))}
+      </div>
 
-          <div className="question-navigation">
-            <button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>Previous</button>
-            {currentQuestionIndex === quizData.length - 1 ? (
-              <button onClick={handleSubmitQuiz}>Submit</button>
-            ) : (
-              <button onClick={handleNextQuestion}>Next</button>
-            )}
-          </div>
+      <div className="question-navigation">
+        <button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0}>Previous</button>
+        {currentQuestionIndex === quizData.length - 1 ? (
+          <button onClick={handleSubmitQuiz}>Submit</button>
+        ) : (
+          <button onClick={handleNextQuestion}>Next</button>
+        )}
+      </div>
 
-          <div className="question-numbers">
-            <h3>Select Question:</h3>
-            {renderQuestionNumbers()}
-          </div>
+        <div className="question-numbers">
+        <h3>Select Question:</h3>
+        {renderQuestionNumbers()}
         </div>
+        </>
+        )}
+      </div>
+
       )}
     </div>
   );
