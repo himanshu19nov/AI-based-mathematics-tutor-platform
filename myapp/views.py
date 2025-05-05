@@ -348,6 +348,22 @@ def ask_ai(request):
         return Response({'error': 'Together API key not set'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     question = request.data.get("question")
+    tone = request.data.get("tone", "neutral")
+    style = request.data.get("style", "concise")
+
+    TONE_DESCRIPTIONS = {
+        "neutral": "Maintain a balanced and objective tone.",
+        "friendly": "Use a warm and approachable tone as if you're speaking to a friend.",
+        "professional": "Use formal and respectful language suitable for a professional setting.",
+        "humorous": "Use light-hearted and witty language to make the response fun."
+    }
+
+    STYLE_DESCRIPTIONS = {
+        "concise": "Be brief and to the point, focusing only on the essential information.",
+        "detailed": "Provide a thorough explanation with relevant examples and elaboration.",
+        "creative": "Think outside the box and present the response in an imaginative way."
+    }
+
     if not question:
         return Response({'error': 'No question provided'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -359,6 +375,13 @@ def ask_ai(request):
             "Content-Type": "application/json"
         }
 
+        # Construct the tone/style instruction
+
+        tone_instruction = TONE_DESCRIPTIONS.get(tone, "")
+        style_instruction = STYLE_DESCRIPTIONS.get(style, "")
+        personal_instruction = f"{tone_instruction} {style_instruction}".strip()
+
+
         # Inject default context into the user prompt (simple RAG)
         user_prompt = f"{default_context}\n\nQuestion: {question}"
 
@@ -366,7 +389,7 @@ def ask_ai(request):
             # "model": "togethercomputer/llama-2-7b-chat",
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "messages": [
-                {"role": "system", "content": "You are a helpful math tutor. Use the provided context to assist the student."},
+                {"role": "system", "content": f"You are a helpful math tutor. Use the provided context to assist the student. {personal_instruction}"},
                 {"role": "user", "content": user_prompt}
             ],
             "temperature": 0.7,
@@ -679,7 +702,7 @@ def get_user_by_username(request, username):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
-        @api_view(['GET'])
+@api_view(['GET'])
 def search_users(request):
     query = request.GET.get('query', '')
     users = User.objects.filter(username__icontains=query)

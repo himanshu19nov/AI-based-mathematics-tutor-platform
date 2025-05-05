@@ -9,10 +9,17 @@ const AIChatbox = () => {
   const [loading, setLoading] = useState(false);         // To show loading indicator when waiting for AI
   const chatHistoryRef = useRef(null);                   // Reference to the chat history container
 
+  const [tone, setTone] = useState('neutral'); 
+  const [style, setStyle] = useState('concise'); 
+
+
   // Function to handle user message input
   const handleInputChange = (e) => {
     setUserMessage(e.target.value);
   };
+
+  const handleToneChange = (e) => setTone(e.target.value);
+  const handleStyleChange = (e) => setStyle(e.target.value);
 
   // Function to send user message to the Django backend and get AI response
   const sendMessage = async () => {
@@ -28,7 +35,7 @@ const AIChatbox = () => {
       const apiUrl = process.env.REACT_APP_API_URL;
       // Send the user message to the Django backend API
       // const response = await axios.post('http://localhost:8000/api/ask', { question: userMessage });
-      const response = await axios.post(`${apiUrl}/api/ask`, { question: userMessage });
+      const response = await axios.post(`${apiUrl}/api/ask`, { question: userMessage, tone, style });
       
       const aiAnswer = response.data.answer || "Sorry, I couldn't understand your question.";
 
@@ -78,21 +85,51 @@ const AIChatbox = () => {
         ))}
       </div>
 
-      {loading && <div className="loading">AI is typing...</div>}  {/* Display loading message */}
+      {loading && <div className="loading">AI tutor is typing...</div>}  {/* Display loading message */}
 
-      <div className="input-container">
-        <div className="textarea-container">
+      <div className="input-controls">
+        <div className="input-wrapper">
           <textarea
             value={userMessage}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question..."
+            placeholder="Hit me with your trickiest equation! 🤓✏️"
             rows="5"
           />
           <button onClick={sendMessage} disabled={loading} className="send-button">
             Send
           </button>
         </div>
+ 
+        
+      </div> 
+      
+      <div className="tone-style-controls">
+      <div className="button-group tone-buttons">
+      <label className="control-label">Tone</label>
+        {['neutral', 'friendly', 'professional', 'humorous'].map((t) => (
+          <button
+            key={t}
+            className={`tone-button ${tone === t ? 'active' : ''}`}
+            onClick={() => setTone(t)}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div className="button-group style-buttons">
+      <label className="control-label">Style</label>
+        {['concise', 'detailed', 'creative'].map((s) => (
+          <button
+            key={s}
+            className={`style-button ${style === s ? 'active' : ''}`}
+            onClick={() => setStyle(s)}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
       </div>
     </div>
   );

@@ -9,6 +9,8 @@ const Login = ({ setIsAuthenticated }) => {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate(); // Using useNavigate instead of useHistory
+  const [loading, setLoading] = useState(false);
+
 
   /*
   const handleLogin = (event) => {
@@ -27,6 +29,10 @@ const Login = ({ setIsAuthenticated }) => {
 
   const handleLogin = async (event) => {
     event.preventDefault(); // Prevent page reload on form submission
+
+    setLoading(true); // Start loading
+    setErrorMessage(''); // Clear previous errors
+  
     try {
       // const response = await fetch('http://127.0.0.1:8000/api/login/', {
         const response = await fetch(`${apiUrl}/api/login/`, {
@@ -58,7 +64,10 @@ const Login = ({ setIsAuthenticated }) => {
       }
     } catch (error) {
       setErrorMessage('There was an error connecting to the backend');
+    } finally {
+      setLoading(false); // Stop loading regardless of success or failure
     }
+
   };
 
 
@@ -71,14 +80,17 @@ const Login = ({ setIsAuthenticated }) => {
         
       <h2>Login to Mathematics Tutoring Service (MTS) Platform </h2>
       {errorMessage && <div className="error-message">{errorMessage}</div>}
+      {loading && <div className="loading-message">Connecting, please wait...</div>}
+
       <div className="login-container">
         <form onSubmit={handleLogin}>
         <div >
           <input className="login-input"
-          type="text"
+          
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          disabled={loading}
           />
         </div>
       
@@ -88,9 +100,12 @@ const Login = ({ setIsAuthenticated }) => {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
           />
         </div>
-          <button className="login-button" onClick={handleLogin}>Login</button>
+          <button className="login-button" onClick={handleLogin} disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
+            </button>
           </form>
       </div>
     </div>

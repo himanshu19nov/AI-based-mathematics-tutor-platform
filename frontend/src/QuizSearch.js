@@ -51,7 +51,8 @@ const QuizSearch = () => {
 
   const updateQuizStatus = (quizId, status) => {
     // axios.put(`http://localhost:8000/api/quiz/${quizId}/status/`, 
-    axios.put(`${apiUrl}/api/quiz/${quizId}/status/`, 
+    // axios.put(`${apiUrl}/api/quiz/${quizId}/status/`,
+    axios.put(`${apiUrl}/api/quiz/${quizId}/update/`, 
       { quiz_status: status },
       {
         headers: { Authorization: `Bearer ${token}` }
