@@ -223,14 +223,14 @@ class KnowledgeBase(models.Model):
     class Meta:
         db_table = 'knowledge_base'
 
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
+# from django.db.models.signals import pre_save
+# from django.dispatch import receiver
 
-from sentence_transformers import SentenceTransformer
-model = SentenceTransformer('all-MiniLM-L6-v2')  # Loaded once per process
+# from sentence_transformers import SentenceTransformer
+# model = SentenceTransformer('all-MiniLM-L6-v2')  # Loaded once per process
 
-@receiver(pre_save, sender=KnowledgeBase)
-def generate_embedding(sender, instance, **kwargs):
-    if not instance.embedding:
-        text = f"{instance.title}\n{instance.content}"
-        instance.embedding = model.encode(text).tolist()
+# @receiver(pre_save, sender=KnowledgeBase)
+# def generate_embedding(sender, instance, **kwargs):
+#     if not instance.embedding:
+#         text = f"{instance.title}\n{instance.content}"
+#         instance.embedding = model.encode(text).tolist()

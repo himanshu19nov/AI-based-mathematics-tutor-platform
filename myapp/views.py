@@ -347,13 +347,35 @@ def cosine_similarity(a, b):
 
 import traceback
 import requests
-from sentence_transformers import SentenceTransformer, util
-import torch
 from .models import KnowledgeBase
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
-# Load embedding model once (you can also memoize this at module level)
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+import cohere
 
+# def get_hf_embedding(text):
+    
+#     headers = {
+#         "Authorization": f"Bearer {os.getenv('HF_API_TOKEN')}",
+#         # "X-Use-Cache": "false",  
+#         "Content-Type": "application/json"
+#     }
+#     # response = requests.post(
+#     #     "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2",
+#     #     headers=headers,
+#     #     json={"inputs": [text]} 
+#     # )
+#     response = requests.post(
+#         "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2",
+#         headers=headers,
+#         json={"inputs": text}
+#     )
+#     response.raise_for_status()
+#     return response.json()[0]  # list of floats
+
+
+# Limit the total number of user+assistant messages to avoid API input error
+MAX_HISTORY_MESSAGES = 9  # Max number of user/assistant messages (5 turns)
 
 @csrf_exempt
 @api_view(['POST'])
@@ -387,19 +409,28 @@ def ask_ai(request):
 
     try:
 
+        # # Embed the user question 
+        # question_embedding = get_hf_embedding(question)
+        # question_vec = np.array(question_embedding).reshape(1, -1)
 
+        cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
 
-        # Embed the user question 
-        question_embedding = embedding_model.encode(question, convert_to_tensor=True)
+        # Get embedding for the question
+        embed_response = cohere_client.embed(
+            texts=[question],
+            model="embed-english-v3.0",
+            input_type="search_query"
+        )
+        question_vec = np.array(embed_response.embeddings[0]).reshape(1, -1)
  
         # Search for top relevant KB entries 
         kb_entries = KnowledgeBase.objects.exclude(embedding=None)
         kb_contexts = []
 
         for entry in kb_entries:
-            entry_tensor = torch.tensor(entry.embedding)
-            similarity = util.pytorch_cos_sim(question_embedding, entry_tensor)[0][0]
-            kb_contexts.append((similarity.item(), entry))
+            entry_vec = np.array(entry.embedding).reshape(1, -1)
+            sim = cosine_similarity(question_vec, entry_vec)[0][0]
+            kb_contexts.append((sim, entry))
 
         # Sort by similarity
         kb_contexts = sorted(kb_contexts, key=lambda x: x[0], reverse=True)[:3]  # top 3 matches
@@ -441,6 +472,7 @@ def ask_ai(request):
         # Clean and structure the message history
         def clean_history(raw_text):
             lines = raw_text.strip().split('\n')
+            print(lines)
             result = []
             last_role = None
             for line in lines:
@@ -464,18 +496,17 @@ def ask_ai(request):
                 result.append({"role": role, "content": content})
                 last_role = role
 
-            # Keep only the last 5 turns = 10 messages max       
-            return result[-10:]
+
+            return result[-MAX_HISTORY_MESSAGES:]
+
 
         cleaned_history = clean_history(history)
 
         messages.extend(cleaned_history)
 
 
-
-
         # messages.append({"role": "user", "content": question.strip()})
-        if messages[-1]["role"] != "user":
+        if not messages or messages[-1]["role"] == "assistant":
             messages.append({"role": "user", "content": question.strip()})
 
 
@@ -965,14 +996,36 @@ def upload_knowledge_document(request):
             os.remove(file_path)
             return Response({"error": "Unsupported file type. Only PDF and DOCX are allowed."}, status=status.HTTP_400_BAD_REQUEST)
 
-        KnowledgeBase.objects.create(
+        # Create KB entry
+        kb_entry = KnowledgeBase.objects.create(
             category=category,
             title=title,
             content=extracted_text
         )
 
+        # Clean up file
         os.remove(file_path)
+
+        # Generate embedding with Cohere
+        co = cohere.Client(os.getenv("COHERE_API_KEY"))
+        response = co.embed(
+            texts=[extracted_text],
+            model="embed-english-v3.0",
+            input_type="search_document"
+        )
+        kb_entry.embedding = response.embeddings[0]
+        kb_entry.save()
+
         return Response({"message": "File uploaded and knowledge stored successfully."}, status=status.HTTP_200_OK)
+
+        # KnowledgeBase.objects.create(
+        #     category=category,
+        #     title=title,
+        #     content=extracted_text
+        # )
+
+        # os.remove(file_path)
+        # return Response({"message": "File uploaded and knowledge stored successfully."}, status=status.HTTP_200_OK)
 
     except Exception as e:
         os.remove(file_path)

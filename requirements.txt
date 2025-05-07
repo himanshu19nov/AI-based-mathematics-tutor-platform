@@ -13,4 +13,6 @@ whitenoise
 requests
 python-docx
 PyMuPDF
-sentence_transformers
+numpy
+scikit-learn
+cohere
