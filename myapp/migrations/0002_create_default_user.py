@@ -49,7 +49,7 @@ def create_default_user(apps, schema_editor):
             'lastName': 'tester3-last',
             'fullName': 'tester3-first tester3-last',
             'password': '123',
-            'role': 'teacger',
+            'role': 'teacher',
             'academicLevel': 'N/A',
             'userStatus': 'active'
         },

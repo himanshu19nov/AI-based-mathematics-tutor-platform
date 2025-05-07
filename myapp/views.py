@@ -107,9 +107,9 @@ from django.contrib.auth.hashers import make_password
 from .models import User
 
 @api_view(['PUT'])
-def update_user(request, user_id):
+def update_user(request, username):
     try:
-        user = User.objects.get(id=user_id)
+        user = User.objects.get(username=username)
         data = request.data
 
         # Update fields if present in the request
@@ -337,8 +337,23 @@ def delete_question(request, question_id):
 #     except Exception as e:
 #         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+from numpy import dot
+from numpy.linalg import norm
+
+def cosine_similarity(a, b):
+    return dot(a, b) / (norm(a) * norm(b))
+
+
+
 import traceback
 import requests
+from sentence_transformers import SentenceTransformer, util
+import torch
+from .models import KnowledgeBase
+
+# Load embedding model once (you can also memoize this at module level)
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+
 
 @csrf_exempt
 @api_view(['POST'])
@@ -371,6 +386,35 @@ def ask_ai(request):
     print("Question:", question)
 
     try:
+
+
+
+        # Embed the user question 
+        question_embedding = embedding_model.encode(question, convert_to_tensor=True)
+ 
+        # Search for top relevant KB entries 
+        kb_entries = KnowledgeBase.objects.exclude(embedding=None)
+        kb_contexts = []
+
+        for entry in kb_entries:
+            entry_tensor = torch.tensor(entry.embedding)
+            similarity = util.pytorch_cos_sim(question_embedding, entry_tensor)[0][0]
+            kb_contexts.append((similarity.item(), entry))
+
+        # Sort by similarity
+        kb_contexts = sorted(kb_contexts, key=lambda x: x[0], reverse=True)[:3]  # top 3 matches
+
+        # Combine top KB results into a single context string 
+        context_text = "\n\n".join(
+            f"{entry.category}\n{entry.content}" for _, entry in kb_contexts if _ > 0.4
+        )
+        # Strip any unnecessary characters
+        context_text = context_text.replace("\n", " ").strip()
+
+
+
+
+
         headers = {
             "Authorization": f"Bearer {TOGETHER_API_KEY}",
             "Content-Type": "application/json"
@@ -384,9 +428,15 @@ def ask_ai(request):
 
 
         # Start with system message
-        messages = [
-            {"role": "system", "content": f"You are a helpful math tutor. Use the provided context to assist the student. {personal_instruction}"}
+        if context_text:
+            messages = [
+            {"role": "system", 
+             "content": f"You are a helpful math tutor. Use the provided knowledge to assist the student. Here is some relevant knowledge: {context_text.strip()}. {personal_instruction}"}
         ]
+        else:
+            messages = [
+                {"role": "system", "content": f"You are a helpful math tutor. Use the provided context to assist the student. {personal_instruction}"}
+            ]
 
         # Clean and structure the message history
         def clean_history(raw_text):
@@ -414,16 +464,19 @@ def ask_ai(request):
                 result.append({"role": role, "content": content})
                 last_role = role
 
-            # Keep only the last 5 turns = 10 messages max
+            # Keep only the last 5 turns = 10 messages max       
             return result[-10:]
 
         cleaned_history = clean_history(history)
 
         messages.extend(cleaned_history)
+
+
+
+
         # messages.append({"role": "user", "content": question.strip()})
         if messages[-1]["role"] != "user":
             messages.append({"role": "user", "content": question.strip()})
-
 
 
         print(messages)
@@ -443,6 +496,9 @@ def ask_ai(request):
             "max_tokens": 512,
             "top_p": 0.95,
         }
+
+        # Log the full payload
+        print("Payload:", json.dumps(payload, indent=2))
 
         response = requests.post(
             "https://api.together.xyz/v1/chat/completions",
@@ -749,23 +805,72 @@ def get_user_by_username(request, username):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
+# def search_users(request):
+#     query = request.GET.get('query', '')
+#     users = User.objects.filter(username__icontains=query)
+#     return Response({'users': list(users.values())})
+
+
 @api_view(['GET'])
 def search_users(request):
-    query = request.GET.get('query', '')
-    users = User.objects.filter(username__icontains=query)
-    return Response({'users': list(users.values())})
+    try:
+        filters = {}
+        
+        # Get parameters from the request
+        if username := request.GET.get('username'):
+            filters['username__icontains'] = username
+        if first_name := request.GET.get('first_name'):
+            filters['firstName__icontains'] = first_name
+        if last_name := request.GET.get('last_name'):
+            filters['lastName__icontains'] = last_name
+        if email := request.GET.get('email'):
+            filters['email__icontains'] = email
+        if role := request.GET.get('role'):
+            filters['role__iexact'] = role  # Ensure role is one of the options (case-insensitive)
+
+        # Ensure that filters are passed correctly
+        users = User.objects.filter(**filters)  # Correct unpacking of the filters dictionary
+
+        # Return a list of users
+        return Response({'users': list(users.values())})
+    
+    except Exception as e:
+        print("Search error:", str(e))
+        return Response({'error': str(e)}, status=500)
+
 
 #  Get assigned students for a parent
 
 @api_view(['GET'])
-def get_assigned_students(request, username):
+def get_assigned_students(request, parent_username):
     try:
-        parent = User.objects.get(username=username, role='parent')
+        parent = User.objects.get(username=parent_username, role='parent')
         mappings = ParentStudentMapping.objects.filter(parent=parent)
-        students = [{"username": m.student.username, "fullName": m.student.fullName} for m in mappings]
+
+        students = []
+        for m in mappings:
+            student = m.student
+            if student:
+                full_name = getattr(student, 'fullName', f"{student.firstName} {student.lastName}")
+                students.append({
+                    "username": student.username,
+                    "fullName": full_name
+                })
+
         return Response({"students": students})
     except User.DoesNotExist:
         return Response({"error": "Parent not found"}, status=404)
+    except Exception as e:
+        print("Unexpected error in get_assigned_students:", str(e))
+        return Response({"error": "Internal server error"}, status=500)
+# def get_assigned_students(request, username):
+#     try:
+#         parent = User.objects.get(username=username, role='parent')
+#         mappings = ParentStudentMapping.objects.filter(parent=parent)
+#         students = [{"username": m.student.username, "fullName": m.student.fullName} for m in mappings]
+#         return Response({"students": students})
+#     except User.DoesNotExist:
+#         return Response({"error": "Parent not found"}, status=404)
 
 # Assign a student to a parent
 
@@ -806,3 +911,87 @@ def remove_assigned_student(request, parent_username, student_username):
         return Response({'message': 'Parent or student not found.'}, status=404)
     except Exception as e:
         return Response({'message': f'Error: {str(e)}'}, status=500)
+
+
+
+
+
+
+from django.core.files.storage import default_storage
+from django.conf import settings
+import fitz  # PyMuPDF for PDFs
+import uuid
+from docx import Document
+
+from .models import KnowledgeBase  # Assuming you have the KnowledgeBase model
+
+# Helper function to extract text from PDF
+def extract_text_from_pdf(pdf_path):
+    doc = fitz.open(pdf_path)
+    text = ""
+    for page in doc:
+        text += page.get_text()
+    return text
+
+# Helper function to extract text from DOCX
+def extract_text_from_docx(docx_path):
+    doc = Document(docx_path)
+    text = ""
+    for para in doc.paragraphs:
+        text += para.text + "\n"
+    return text
+
+# API View to handle file upload and extraction
+@api_view(['POST'])
+def upload_knowledge_document(request):
+    if 'file' not in request.FILES:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    file = request.FILES['file']
+    category = request.data.get('category')
+    title = request.data.get('title') or file.name
+    file_path = os.path.join(settings.MEDIA_ROOT, file.name)
+
+    with default_storage.open(file_path, 'wb') as destination:
+        for chunk in file.chunks():
+            destination.write(chunk)
+
+    try:
+        if file.name.endswith('.pdf'):
+            extracted_text = extract_text_from_pdf(file_path)
+        elif file.name.endswith('.docx'):
+            extracted_text = extract_text_from_docx(file_path)
+        else:
+            os.remove(file_path)
+            return Response({"error": "Unsupported file type. Only PDF and DOCX are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        KnowledgeBase.objects.create(
+            category=category,
+            title=title,
+            content=extracted_text
+        )
+
+        os.remove(file_path)
+        return Response({"message": "File uploaded and knowledge stored successfully."}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        os.remove(file_path)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+from rest_framework.views import APIView    
+from .serializers import KnowledgeBaseSerializer
+
+class KnowledgeBaseListView(APIView):
+    def get(self, request):
+        entries = KnowledgeBase.objects.all().order_by('-created_at')
+        serializer = KnowledgeBaseSerializer(entries, many=True)
+        return Response(serializer.data)
+    
+class KnowledgeBaseDeleteView(APIView):
+    def delete(self, request, id):
+        try:
+            entry = KnowledgeBase.objects.get(id=id)
+            entry.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except KnowledgeBase.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)

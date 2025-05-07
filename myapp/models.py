@@ -206,3 +206,31 @@ class AIQuiz(models.Model):
 
     class Meta:
         db_table = 'Quizzes'
+
+from django.contrib.postgres.fields import ArrayField
+
+class KnowledgeBase(models.Model):
+    category = models.CharField(max_length=100, blank=True, null=True)
+    title = models.TextField()
+    content = models.TextField()
+    embedding = ArrayField(models.FloatField(), blank=True, null=True) # 768-dim vector
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+    
+    class Meta:
+        db_table = 'knowledge_base'
+
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer('all-MiniLM-L6-v2')  # Loaded once per process
+
+@receiver(pre_save, sender=KnowledgeBase)
+def generate_embedding(sender, instance, **kwargs):
+    if not instance.embedding:
+        text = f"{instance.title}\n{instance.content}"
+        instance.embedding = model.encode(text).tolist()

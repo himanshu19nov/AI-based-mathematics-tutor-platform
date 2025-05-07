@@ -133,3 +133,85 @@
 .search-table th {
   background-color: #f1f1f1;
 }
+
+div.search-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+div.search-fields input {
+  padding: 5px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  min-width: 40px;
+}
+
+
+div .search-fields select{
+  padding: 5px 5px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+}
+
+.search-fields button.search-button {
+  padding: 5px 12px;
+  font-size: 14px;
+  border: 2px solid #ccc;
+  border-radius: 20px;
+  min-width: 150px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+.form-container .form-field .select-parent {
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid black;
+  border-radius: 5px;
+  background-color: white;
+  color: black;
+  max-width: 250px;
+  cursor: pointer;
+  appearance: none; /* Removes default arrow in some browsers */
+}
+
+button.assign-button {
+  padding: 12px 12px;
+  font-size: 14px;
+  border: 2px solid #ccc;
+  border-radius: 5px;
+  min-width: 100px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+.assigned-students-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.assigned-students-table th,
+.assigned-students-table td {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  text-align: left;
+}
+
+button.search-button {
+  padding: 12px 12px;
+  font-size: 14px;
+  border: 1px solid black;
+  border-radius: 5px;
+  min-width: 100px;
+  background-color:darkorange;
+  color:black;
+  cursor: pointer;
+}

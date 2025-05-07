@@ -11,3 +11,6 @@ dj-database-url
 gunicorn
 whitenoise
 requests
+python-docx
+PyMuPDF
+sentence_transformers

@@ -8,6 +8,7 @@ import UserRegistration from './UserRegistration';
 import AttendQuiz from './AttendQuiz';
 import EvaluateQuiz from './EvaluateQuiz';
 import ViewResult from './ViewResult';
+import KnowledgeBase from './KnowledgeBase';
 
 function App() {
   const [selectedOption, setSelectedOption] = useState(null);
@@ -115,6 +116,14 @@ function App() {
             📊 View Result
           </div>
           ) : null}
+          {role === 'teacher' ? (
+          <div
+            className={`sidebar-button ${selectedOption === 'knowledgeBase' ? 'active' : ''}`}
+            onClick={() => handleMenuClick('knowledgeBase')}
+          >
+            💾 Knowledge Database
+          </div>
+          ) : null}
         </div>
 
         {/* Main Content Area */}
@@ -142,6 +151,7 @@ function App() {
           {selectedOption === 'evaluateQuiz' && <EvaluateQuiz />}
           {selectedOption === 'chatbox' && <AIChatbox />}
           {selectedOption === 'viewResult' && <ViewResult />}
+          {selectedOption === 'knowledgeBase' && <KnowledgeBase />}
         </div>
       </div>
     </div>
