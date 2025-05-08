@@ -206,3 +206,20 @@ class AIQuiz(models.Model):
 
     class Meta:
         db_table = 'Quizzes'
+
+from django.contrib.postgres.fields import ArrayField
+
+class KnowledgeBase(models.Model):
+    category = models.CharField(max_length=100, blank=True, null=True)
+    title = models.TextField()
+    content = models.TextField()
+    embedding = ArrayField(models.FloatField(), blank=True, null=True) # 768-dim vector
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+    
+    class Meta:
+        db_table = 'knowledge_base'
+

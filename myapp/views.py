@@ -107,9 +107,9 @@ from django.contrib.auth.hashers import make_password
 from .models import User
 
 @api_view(['PUT'])
-def update_user(request, user_id):
+def update_user(request, username):
     try:
-        user = User.objects.get(id=user_id)
+        user = User.objects.get(username=username)
         data = request.data
 
         # Update fields if present in the request
@@ -337,8 +337,23 @@ def delete_question(request, question_id):
 #     except Exception as e:
 #         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+from numpy import dot
+from numpy.linalg import norm
+
+def cosine_similarity(a, b):
+    return dot(a, b) / (norm(a) * norm(b))
+
 import traceback
 import requests
+from .models import KnowledgeBase
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+import cohere
+
+
+# Limit the total number of user+assistant messages to avoid API input error
+MAX_HISTORY_MESSAGES = 9  # Max number of user/assistant messages (5 turns)
 
 @csrf_exempt
 @api_view(['POST'])
@@ -371,6 +386,44 @@ def ask_ai(request):
     print("Question:", question)
 
     try:
+
+        # # Embed the user question 
+        # question_embedding = get_hf_embedding(question)
+        # question_vec = np.array(question_embedding).reshape(1, -1)
+
+        cohere_client = cohere.Client(os.getenv("COHERE_API_KEY"))
+
+        # Get embedding for the question
+        embed_response = cohere_client.embed(
+            texts=[question],
+            model="embed-english-v3.0",
+            input_type="search_query"
+        )
+        question_vec = np.array(embed_response.embeddings[0]).reshape(1, -1)
+ 
+        # Search for top relevant KB entries 
+        kb_entries = KnowledgeBase.objects.exclude(embedding=None)
+        kb_contexts = []
+
+        for entry in kb_entries:
+            entry_vec = np.array(entry.embedding).reshape(1, -1)
+            sim = cosine_similarity(question_vec, entry_vec)[0][0]
+            kb_contexts.append((sim, entry))
+
+        # Sort by similarity
+        kb_contexts = sorted(kb_contexts, key=lambda x: x[0], reverse=True)[:3]  # top 3 matches
+
+        # Combine top KB results into a single context string 
+        context_text = "\n\n".join(
+            f"{entry.category}\n{entry.content}" for _, entry in kb_contexts if _ > 0.4
+        )
+        # Strip any unnecessary characters
+        context_text = context_text.replace("\n", " ").strip()
+
+
+
+
+
         headers = {
             "Authorization": f"Bearer {TOGETHER_API_KEY}",
             "Content-Type": "application/json"
@@ -384,13 +437,20 @@ def ask_ai(request):
 
 
         # Start with system message
-        messages = [
-            {"role": "system", "content": f"You are a helpful math tutor. Use the provided context to assist the student. {personal_instruction}"}
+        if context_text:
+            messages = [
+            {"role": "system", 
+             "content": f"You are a helpful math tutor. Use the provided knowledge to assist the student. Here is some relevant knowledge: {context_text.strip()}. {personal_instruction}"}
         ]
+        else:
+            messages = [
+                {"role": "system", "content": f"You are a helpful math tutor. Use the provided context to assist the student. {personal_instruction}"}
+            ]
 
         # Clean and structure the message history
         def clean_history(raw_text):
             lines = raw_text.strip().split('\n')
+            print(lines)
             result = []
             last_role = None
             for line in lines:
@@ -414,16 +474,18 @@ def ask_ai(request):
                 result.append({"role": role, "content": content})
                 last_role = role
 
-            # Keep only the last 5 turns = 10 messages max
-            return result[-10:]
+
+            return result[-MAX_HISTORY_MESSAGES:]
+
 
         cleaned_history = clean_history(history)
 
         messages.extend(cleaned_history)
-        # messages.append({"role": "user", "content": question.strip()})
-        if messages[-1]["role"] != "user":
-            messages.append({"role": "user", "content": question.strip()})
 
+
+        # messages.append({"role": "user", "content": question.strip()})
+        if not messages or messages[-1]["role"] == "assistant":
+            messages.append({"role": "user", "content": question.strip()})
 
 
         print(messages)
@@ -443,6 +505,9 @@ def ask_ai(request):
             "max_tokens": 512,
             "top_p": 0.95,
         }
+
+        # Log the full payload
+        print("Payload:", json.dumps(payload, indent=2))
 
         response = requests.post(
             "https://api.together.xyz/v1/chat/completions",
@@ -501,21 +566,28 @@ from .models import Quiz, QuizQuestion
 import ast
 
 @api_view(['POST'])
-def attend_quiz(request):
-    quiz_name = request.data.get('quiz_name')
-    quiz_level = request.data.get('quiz_level')
-    category = request.data.get('category')
+def attend_quiz(request):   
 
-    if not quiz_name or not quiz_level or not category:
-        return Response({'error': 'quiz_name, quiz_level, and category are required'}, status=400)
+    # quiz_name = request.data.get('quiz_name')
+    # quiz_level = request.data.get('quiz_level')
+    # category = request.data.get('category')
+
+    # if not quiz_name or not quiz_level or not category:
+    #     return Response({'error': 'quiz_name, quiz_level, and category are required'}, status=400)
+
+    quiz_id = request.data.get('quiz_id')
+
+    if not quiz_id:
+        return Response({'error': 'quiz_id is required'}, status=400)
 
     try:
-        quiz = Quiz.objects.get(quiz_title=quiz_name, quiz_level=quiz_level)
+        # quiz = Quiz.objects.get(quiz_title=quiz_name, quiz_level=quiz_level)
+        quiz = Quiz.objects.get(quiz_id=quiz_id)
         quiz_questions = QuizQuestion.objects.filter(quiz=quiz).select_related('question')
 
         filtered_questions = []
         for qq in quiz_questions:
-            if qq.question.category.lower() == category.lower():
+            # if qq.question.category.lower() == category.lower():
                 try:
                     options = ast.literal_eval(qq.question.answers)
                 except:
@@ -524,11 +596,13 @@ def attend_quiz(request):
                 filtered_questions.append({
                     "questionId": qq.question.question_id,
                     "question": qq.question.question_text,
+                    "ans_type": qq.question.ansType, 
                     "options": options
                 })
 
         if not filtered_questions:
-            return Response({'error': 'No questions found for selected category and level.'}, status=404)
+            # return Response({'error': 'No questions found for selected category and level.'}, status=404)
+            return Response({'error': 'No questions found for this quiz.'}, status=404)
 
         return Response({'quiz': filtered_questions}, status=200)
 
@@ -541,14 +615,95 @@ def attend_quiz(request):
         return Response({'error': str(e)}, status=500)
 
 
+# @api_view(['POST'])
+# def submit_quiz(request):
+
+#     print("[DEBUG] Incoming data:", request.data)
+
+#     username = request.data.get('username')
+#     quiz_name = request.data.get('quiz_name')
+#     quiz_level = request.data.get('quiz_level')
+#     answers = request.data.get('answers')
+
+#     if not all([username, quiz_name, quiz_level, answers]):
+#         return Response({'error': 'Missing fields'}, status=400)
+
+#     try:
+#         user = User.objects.get(username=username)
+#     except User.DoesNotExist:
+#         return Response({'error': 'User not found'}, status=404)
+
+#     # ✅ Use filter + first to avoid MultipleObjectsReturned error
+#     quiz = Quiz.objects.filter(
+#         quiz_title=quiz_name,
+#         quiz_level=quiz_level,
+#         quiz_status='published'  # Optional: only allow published quizzes
+#     ).order_by('-created_at').first()
+
+#     if not quiz:
+#         return Response({'error': 'Quiz not found'}, status=404)
+
+#     try:
+#         quiz_questions = QuizQuestion.objects.filter(quiz=quiz).select_related('question')
+
+#         # Create the exam record
+#         exam = StudentExam.objects.create(student=user, quiz=quiz, score=0)
+
+#         score = 0
+
+#         for qq in quiz_questions:
+#             question = qq.question
+#             qid_str = str(question.question_id)
+#             user_answer = answers.get(qid_str, "").strip().lower()
+#             correct_answer = question.correct_answer.strip().lower()
+
+#             # 🧠 Debug logs
+#             print(f"[DEBUG] Question ID: {qid_str}")
+#             print(f"[DEBUG] Submitted Answer: '{user_answer}'")
+#             print(f"[DEBUG] Correct Answer:   '{correct_answer}'")
+
+#             is_correct = user_answer == correct_answer
+
+#             if is_correct:
+#                 score += 1
+#                 print(f"[DEBUG] -> Answer is correct.")
+#             else:
+#                 print(f"[DEBUG] -> Answer is incorrect.")
+
+#             Answer.objects.create(
+#                 student_exam=exam,
+#                 question=question,
+#                 student_answer=user_answer,
+#                 is_correct=is_correct
+#             )
+
+#         exam.score = score
+#         exam.save()
+
+#         print(f"[DEBUG] Final Score for {user.username}: {score}")
+
+#         return Response({
+#             'message': 'Quiz submitted successfully',
+#             'score': score,
+#             'total_questions': quiz_questions.count()
+#         }, status=200)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return Response({'error': str(e)}, status=500)
+
 @api_view(['POST'])
 def submit_quiz(request):
+    print("[DEBUG] Incoming data:", request.data)
+
+    # Extract the incoming data
     username = request.data.get('username')
-    quiz_name = request.data.get('quiz_name')
-    quiz_level = request.data.get('quiz_level')
+    quiz_id = request.data.get('quizId')
     answers = request.data.get('answers')
 
-    if not all([username, quiz_name, quiz_level, answers]):
+    # Validate the required data fields
+    if not all([username, quiz_id, answers]):
         return Response({'error': 'Missing fields'}, status=400)
 
     try:
@@ -556,14 +711,9 @@ def submit_quiz(request):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
-    # ✅ Use filter + first to avoid MultipleObjectsReturned error
-    quiz = Quiz.objects.filter(
-        quiz_title=quiz_name,
-        quiz_level=quiz_level,
-        quiz_status='published'  # Optional: only allow published quizzes
-    ).order_by('-created_at').first()
-
-    if not quiz:
+    try:
+        quiz = Quiz.objects.get(quiz_id=quiz_id)
+    except Quiz.DoesNotExist:
         return Response({'error': 'Quiz not found'}, status=404)
 
     try:
@@ -572,43 +722,36 @@ def submit_quiz(request):
         # Create the exam record
         exam = StudentExam.objects.create(student=user, quiz=quiz, score=0)
 
-        score = 0
-
+        # Iterate through the answers and create Answer records
         for qq in quiz_questions:
             question = qq.question
             qid_str = str(question.question_id)
-            user_answer = answers.get(qid_str, "").strip().lower()
+
+            # Get the student's answer for this question
+            # user_answer = answers.get(qid_str, "").strip().lower()
+            user_answer_raw = answers.get(qid_str, "")
+            if isinstance(user_answer_raw, list):
+                user_answer = [ans.strip().lower() for ans in user_answer_raw]
+            else:
+                user_answer = user_answer_raw.strip().lower()
             correct_answer = question.correct_answer.strip().lower()
 
-            # 🧠 Debug logs
+            # Debug logs to check answers
             print(f"[DEBUG] Question ID: {qid_str}")
             print(f"[DEBUG] Submitted Answer: '{user_answer}'")
             print(f"[DEBUG] Correct Answer:   '{correct_answer}'")
 
-            is_correct = user_answer == correct_answer
-
-            if is_correct:
-                score += 1
-                print(f"[DEBUG] -> Answer is correct.")
-            else:
-                print(f"[DEBUG] -> Answer is incorrect.")
-
+            # Create an Answer record for each question
             Answer.objects.create(
                 student_exam=exam,
                 question=question,
-                student_answer=user_answer,
-                is_correct=is_correct
+                student_answer=user_answer
             )
 
-        exam.score = score
         exam.save()
-
-        print(f"[DEBUG] Final Score for {user.username}: {score}")
 
         return Response({
             'message': 'Quiz submitted successfully',
-            'score': score,
-            'total_questions': quiz_questions.count()
         }, status=200)
 
     except Exception as e:
@@ -682,54 +825,144 @@ def view_result(request, user_id):
         return Response({'error': str(e)}, status=500)
 
 
+@api_view(['GET'])
+def get_usernames_by_quiz(request, quiz_id):
+    student_exams = StudentExam.objects.filter(quiz_id=quiz_id).select_related('student')
+    
+    user_attempts = [
+        {
+            "student_exam_id": exam.student_exam_id,
+            "username": exam.student.username,
+            "taken_at": exam.taken_at.isoformat()
+        }
+        for exam in student_exams
+    ]
 
-@api_view(['POST'])
-def evaluate_quiz(request):
-    data = request.data
-    username = data.get('username')
-    quiz_name = data.get('quiz_name')
-    quiz_level = data.get('quiz_level')
-    evaluations = data.get('evaluations')
+    return Response({"attempts": user_attempts})
 
-    if not all([username, quiz_name, quiz_level, evaluations]):
-        return Response({'error': 'Missing fields'}, status=400)
+def safe_parse(value):
+    if isinstance(value, str) and value.startswith("[") and value.endswith("]"):
+        try:
+            return ast.literal_eval(value)
+        except Exception:
+            return value  
+    return value
 
+@api_view(['GET'])
+def evaluate_quiz(request, examId):
     try:
-        user = User.objects.get(username=username)
-        quiz = Quiz.objects.filter(
-            quiz_title=quiz_name,
-            quiz_level=quiz_level
-        ).order_by('-created_at').first()
+        student_exam = StudentExam.objects.select_related('quiz', 'student').get(student_exam_id=examId)
+        quiz = student_exam.quiz
+        student = student_exam.student
 
-        if not quiz:
-            return Response({'error': 'Quiz not found'}, status=404)
+        answers = Answer.objects.filter(student_exam=student_exam).select_related('question')
 
-        exam = StudentExam.objects.filter(student=user, quiz=quiz).order_by('-taken_at').first()
+        quiz_question_scores = QuizQuestion.objects.filter(quiz=quiz).values_list('question__question_id', 'score')
+        score_map = {q_id: score for q_id, score in quiz_question_scores}
 
-        if not exam:
-            return Response({'error': 'Exam not found'}, status=404)
+        question_data = []
+        answers_dict = {}
 
-        total_score = 0
+        for ans in answers:
+            question = ans.question
 
-        for qid, eval_data in evaluations.items():
-            question = Question.objects.get(question_id=int(qid))
-            answer = Answer.objects.get(student_exam=exam, question=question)
+            options = safe_parse(question.answers)
+            student_answer = safe_parse(ans.student_answer)
 
-            answer.student_mark = eval_data.get('mark', 0)
-            answer.teacher_comment = eval_data.get('comment', '')
+            q_data = {
+                "questionId": question.question_id,
+                "question": question.question_text,
+                "ans_type": question.ansType,
+                "options": options,
+                "user_answer": student_answer,
+                "correct_answer": question.correct_answer,
+                "student_mark": ans.student_mark,
+                "teacher_comment": ans.teacher_comment,
+                "is_correct": ans.is_correct,
+                "assigned_score": score_map.get(question.question_id, None) 
+            }
+            question_data.append(q_data)
+            answers_dict[str(question.question_id)] = ans.student_answer
+
+        return Response({
+            "quiz_id": quiz.quiz_id,
+            "quiz_title": quiz.quiz_title,
+            "quiz_level": quiz.quiz_level,
+            "username": student.username,
+            "score": student_exam.score,
+            "questions": question_data,
+            "answers": answers_dict
+        })
+
+    except StudentExam.DoesNotExist:
+        return Response({"error": "Exam not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PUT'])
+def submit_feedback(request, examId):
+    try:
+        student_exam = StudentExam.objects.get(student_exam_id=examId)
+
+        for item in request.data.get('questions', []):
+            question_id = item.get('questionId')
+            mark = item.get('student_mark')
+            comment = item.get('teacher_comment')
+
+            answer = Answer.objects.get(student_exam=student_exam, question_id=question_id)
+            answer.student_mark = mark
+            answer.teacher_comment = comment
             answer.save()
 
-            total_score += answer.student_mark
-
-        exam.score = total_score
-        exam.save()
-
-        return Response({'message': 'Evaluation saved', 'score': total_score}, status=200)
-
+        return Response({'message': 'Feedback updated successfully'})
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return Response({'error': str(e)}, status=500)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['POST'])
+# def evaluate_quiz(request):
+#     data = request.data
+#     username = data.get('username')
+#     quiz_name = data.get('quiz_name')
+#     quiz_level = data.get('quiz_level')
+#     evaluations = data.get('evaluations')
+
+#     if not all([username, quiz_name, quiz_level, evaluations]):
+#         return Response({'error': 'Missing fields'}, status=400)
+
+#     try:
+#         user = User.objects.get(username=username)
+#         quiz = Quiz.objects.filter(
+#             quiz_title=quiz_name,
+#             quiz_level=quiz_level
+#         ).order_by('-created_at').first()
+
+#         if not quiz:
+#             return Response({'error': 'Quiz not found'}, status=404)
+
+#         exam = StudentExam.objects.filter(student=user, quiz=quiz).order_by('-taken_at').first()
+
+#         if not exam:
+#             return Response({'error': 'Exam not found'}, status=404)
+
+#         total_score = 0
+
+#         for qid, eval_data in evaluations.items():
+#             question = Question.objects.get(question_id=int(qid))
+#             answer = Answer.objects.get(student_exam=exam, question=question)
+
+#             answer.student_mark = eval_data.get('mark', 0)
+#             answer.teacher_comment = eval_data.get('comment', '')
+#             answer.save()
+
+#             total_score += answer.student_mark
+
+#         exam.score = total_score
+#         exam.save()
+
+#         return Response({'message': 'Evaluation saved', 'score': total_score}, status=200)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return Response({'error': str(e)}, status=500)
 
 # Used for user registration
 
@@ -749,23 +982,72 @@ def get_user_by_username(request, username):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
+# def search_users(request):
+#     query = request.GET.get('query', '')
+#     users = User.objects.filter(username__icontains=query)
+#     return Response({'users': list(users.values())})
+
+
 @api_view(['GET'])
 def search_users(request):
-    query = request.GET.get('query', '')
-    users = User.objects.filter(username__icontains=query)
-    return Response({'users': list(users.values())})
+    try:
+        filters = {}
+        
+        # Get parameters from the request
+        if username := request.GET.get('username'):
+            filters['username__icontains'] = username
+        if first_name := request.GET.get('first_name'):
+            filters['firstName__icontains'] = first_name
+        if last_name := request.GET.get('last_name'):
+            filters['lastName__icontains'] = last_name
+        if email := request.GET.get('email'):
+            filters['email__icontains'] = email
+        if role := request.GET.get('role'):
+            filters['role__iexact'] = role  # Ensure role is one of the options (case-insensitive)
+
+        # Ensure that filters are passed correctly
+        users = User.objects.filter(**filters)  # Correct unpacking of the filters dictionary
+
+        # Return a list of users
+        return Response({'users': list(users.values())})
+    
+    except Exception as e:
+        print("Search error:", str(e))
+        return Response({'error': str(e)}, status=500)
+
 
 #  Get assigned students for a parent
 
 @api_view(['GET'])
-def get_assigned_students(request, username):
+def get_assigned_students(request, parent_username):
     try:
-        parent = User.objects.get(username=username, role='parent')
+        parent = User.objects.get(username=parent_username, role='parent')
         mappings = ParentStudentMapping.objects.filter(parent=parent)
-        students = [{"username": m.student.username, "fullName": m.student.fullName} for m in mappings]
+
+        students = []
+        for m in mappings:
+            student = m.student
+            if student:
+                full_name = getattr(student, 'fullName', f"{student.firstName} {student.lastName}")
+                students.append({
+                    "username": student.username,
+                    "fullName": full_name
+                })
+
         return Response({"students": students})
     except User.DoesNotExist:
         return Response({"error": "Parent not found"}, status=404)
+    except Exception as e:
+        print("Unexpected error in get_assigned_students:", str(e))
+        return Response({"error": "Internal server error"}, status=500)
+# def get_assigned_students(request, username):
+#     try:
+#         parent = User.objects.get(username=username, role='parent')
+#         mappings = ParentStudentMapping.objects.filter(parent=parent)
+#         students = [{"username": m.student.username, "fullName": m.student.fullName} for m in mappings]
+#         return Response({"students": students})
+#     except User.DoesNotExist:
+#         return Response({"error": "Parent not found"}, status=404)
 
 # Assign a student to a parent
 
@@ -806,3 +1088,109 @@ def remove_assigned_student(request, parent_username, student_username):
         return Response({'message': 'Parent or student not found.'}, status=404)
     except Exception as e:
         return Response({'message': f'Error: {str(e)}'}, status=500)
+
+
+
+
+
+
+from django.core.files.storage import default_storage
+from django.conf import settings
+import fitz  # PyMuPDF for PDFs
+import uuid
+from docx import Document
+
+from .models import KnowledgeBase  # Assuming you have the KnowledgeBase model
+
+# Helper function to extract text from PDF
+def extract_text_from_pdf(pdf_path):
+    doc = fitz.open(pdf_path)
+    text = ""
+    for page in doc:
+        text += page.get_text()
+    return text
+
+# Helper function to extract text from DOCX
+def extract_text_from_docx(docx_path):
+    doc = Document(docx_path)
+    text = ""
+    for para in doc.paragraphs:
+        text += para.text + "\n"
+    return text
+
+# API View to handle file upload and extraction
+@api_view(['POST'])
+def upload_knowledge_document(request):
+    if 'file' not in request.FILES:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    file = request.FILES['file']
+    category = request.data.get('category')
+    title = request.data.get('title') or file.name
+    file_path = os.path.join(settings.MEDIA_ROOT, file.name)
+
+    with default_storage.open(file_path, 'wb') as destination:
+        for chunk in file.chunks():
+            destination.write(chunk)
+
+    try:
+        if file.name.endswith('.pdf'):
+            extracted_text = extract_text_from_pdf(file_path)
+        elif file.name.endswith('.docx'):
+            extracted_text = extract_text_from_docx(file_path)
+        else:
+            os.remove(file_path)
+            return Response({"error": "Unsupported file type. Only PDF and DOCX are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create KB entry
+        kb_entry = KnowledgeBase.objects.create(
+            category=category,
+            title=title,
+            content=extracted_text
+        )
+
+        # Clean up file
+        os.remove(file_path)
+
+        # Generate embedding with Cohere
+        co = cohere.Client(os.getenv("COHERE_API_KEY"))
+        response = co.embed(
+            texts=[extracted_text],
+            model="embed-english-v3.0",
+            input_type="search_document"
+        )
+        kb_entry.embedding = response.embeddings[0]
+        kb_entry.save()
+
+        return Response({"message": "File uploaded and knowledge stored successfully."}, status=status.HTTP_200_OK)
+
+        # KnowledgeBase.objects.create(
+        #     category=category,
+        #     title=title,
+        #     content=extracted_text
+        # )
+
+        # os.remove(file_path)
+        # return Response({"message": "File uploaded and knowledge stored successfully."}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        os.remove(file_path)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+from rest_framework.views import APIView    
+from .serializers import KnowledgeBaseSerializer
+
+class KnowledgeBaseListView(APIView):
+    def get(self, request):
+        entries = KnowledgeBase.objects.all().order_by('-created_at')
+        serializer = KnowledgeBaseSerializer(entries, many=True)
+        return Response(serializer.data)
+    
+class KnowledgeBaseDeleteView(APIView):
+    def delete(self, request, id):
+        try:
+            entry = KnowledgeBase.objects.get(id=id)
+            entry.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except KnowledgeBase.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)

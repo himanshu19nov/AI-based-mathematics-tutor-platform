@@ -11,3 +11,8 @@ dj-database-url
 gunicorn
 whitenoise
 requests
+python-docx
+PyMuPDF
+numpy
+scikit-learn
+cohere

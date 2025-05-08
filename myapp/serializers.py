@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Question, Quiz, QuizQuestion
+from .models import User, Question, Quiz, QuizQuestion, KnowledgeBase
 
 
 class UserSignupSerializer(serializers.ModelSerializer):
@@ -94,3 +94,10 @@ class QuizListSerializer(serializers.ModelSerializer):
     def get_questions(self, obj):
         quiz_questions = QuizQuestion.objects.filter(quiz=obj).select_related('question')
         return QuizQuestionSerializer(quiz_questions, many=True).data
+
+
+
+class KnowledgeBaseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KnowledgeBase
+        fields = '__all__'

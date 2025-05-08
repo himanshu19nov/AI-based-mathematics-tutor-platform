@@ -14,7 +14,7 @@ const UserRegistration = () => {
   const [newPassword, setNewPassword] = useState('');
   const [academicLevel, setAcademicLevel] = useState([]);
   const [passwordReset, setPasswordReset] = useState('');
-  const [userStatus, setUserStatus] = useState('enable');
+  const [userStatus, setUserStatus] = useState('active');
   const [mode, setMode] = useState('create');
   const [searchQuery, setSearchQuery] = useState('');
   const [message, setMessage] = useState('');
@@ -33,13 +33,19 @@ const UserRegistration = () => {
   ];
 
   useEffect(() => {
+    // Reset message whenever the mode changes
+    setMessage('');
+  }, [mode]);
+
+  useEffect(() => {
     fetchUsers();
   }, []);
 
   const loadParents = async () => {
     try {
       const response = await axios.get(`${apiUrl}/api/users/`);
-      const parentUsers = response.data.users.filter(u => u.role === 'parent');
+      // const parentUsers = response.data.users.filter(u => u.role === 'parent');
+      const parentUsers = response.data.filter(u => u.role === 'parent'); 
       setParents(parentUsers);
     } catch (error) {
       setMessage('Failed to load parents!');
@@ -53,6 +59,15 @@ const UserRegistration = () => {
       setStudentToAssign('');
       setSelectedParent('');
     }
+
+    if (mode === 'search') {
+      setUsername('');
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setRole('');
+    }
+
   }, [mode]);
 
   useEffect(() => {
@@ -83,7 +98,7 @@ const UserRegistration = () => {
     setNewPassword('');
     setAcademicLevel([]);
     setPasswordReset('');
-    setUserStatus('enable');
+    setUserStatus('active');
   };
 
   const handleAcademicLevelChange = (level) => {
@@ -112,7 +127,7 @@ const UserRegistration = () => {
         newPassword: passwordReset === 'yes' ? newPassword : undefined
       };
       // await axios.put(`http://localhost:8000/api/user/update/${username}`, updatedUser);
-      await axios.put(`${apiUrl}/api/user/update/${username}`, updatedUser);
+      await axios.put(`${apiUrl}/api/user/update/${username}/`, updatedUser);
       setMessage('User modified successfully!');
       fetchUsers();
       resetForm();
@@ -134,27 +149,35 @@ const UserRegistration = () => {
         // Safer parsing for academicLevel
       let academic = user.academicLevel;
 
-      try {
-        // If it's a stringified JSON array
-        if (typeof academic === 'string') {
-          academic = JSON.parse(academic);
-        }
-
-        // Clean strings inside the array
-        if (Array.isArray(academic)) {
-          academic = academic.map(item => {
-            if (typeof item === 'string') {
-              return item.replace(/[\[\]'"\\]/g, '').trim();
-            }
-            return item;
-          });
-        }
-
-        setAcademicLevel(Array.isArray(academic) ? academic : []);
-      } catch (e) {
-        // Fallback if anything fails during parsing
+      if (typeof academic === 'string') {
+        // Parse comma-separated string into array
+        setAcademicLevel(academic.split(',').map(level => level.trim()));
+      } else {
         setAcademicLevel([]);
       }
+
+
+      // try {
+      //   // If it's a stringified JSON array
+      //   if (typeof academic === 'string') {
+      //     academic = JSON.parse(academic);
+      //   }
+
+      //   // Clean strings inside the array
+      //   if (Array.isArray(academic)) {
+      //     academic = academic.map(item => {
+      //       if (typeof item === 'string') {
+      //         return item.replace(/[\[\]'"\\]/g, '').trim();
+      //       }
+      //       return item;
+      //     });
+      //   }
+
+      //   setAcademicLevel(Array.isArray(academic) ? academic : []);
+      // } catch (e) {
+      //   // Fallback if anything fails during parsing
+      //   setAcademicLevel([]);
+      // }
 
       setUserStatus(user.userStatus);
       setUserExists(true); 
@@ -169,22 +192,54 @@ const UserRegistration = () => {
   }
 };
 
-  const handleSearch = async () => {
-    try {
-      // const response = await axios.get(`http://localhost:8000/api/user/search?query=${searchQuery}`);
-      const response = await axios.get(`${apiUrl}/api/user/search?query=${searchQuery}`);
-      const userList = response.data.users;
-      setUsers(userList);
+//   const handleSearch = async () => {
+//     try {
+//       // const response = await axios.get(`http://localhost:8000/api/user/search?query=${searchQuery}`);
+//       const response = await axios.get(`${apiUrl}/api/user/search?query=${searchQuery}`);
+//       const userList = response.data.users;
+//       setUsers(userList);
 
-      const assignments = {};
-      for (const user of userList) {
-        if (user.role === 'parent') {
-          try {
-            const res = await axios.get(`${apiUrl}/api/parent/${user.username}/students/`);
-            assignments[user.username] = res.data.students.map(s => s.username).join(', ');
-          }   catch {
-            assignments[user.username] = '';
-          }
+//       const assignments = {};
+//       for (const user of userList) {
+//         if (user.role === 'parent') {
+//           try {
+//             const res = await axios.get(`${apiUrl}/api/parent/${user.username}/students/`);
+//             assignments[user.username] = res.data.students.map(s => s.username).join(', ');
+//           }   catch {
+//             assignments[user.username] = '';
+//           }
+//       }
+//     }
+
+//     setUserAssignments(assignments);
+//   } catch (error) {
+//     setMessage('Search failed!');
+//   }
+// };
+
+const handleSearch = async () => {
+  try {
+    const params = new URLSearchParams();
+
+    if (username) params.append('username', username);
+    if (firstName) params.append('first_name', firstName);
+    if (lastName) params.append('last_name', lastName);
+    if (email) params.append('email', email);
+    if (role) params.append('role', role);
+
+    const response = await axios.get(`${apiUrl}/api/user/search?${params.toString()}`);
+    const userList = response.data.users;
+    setUsers(userList);
+
+    const assignments = {};
+    for (const user of userList) {
+      if (user.role === 'parent') {
+        try {
+          const res = await axios.get(`${apiUrl}/api/parent/${user.username}/students/`);
+          assignments[user.username] = res.data.students.map(s => s.username).join(', ');
+        } catch {
+          assignments[user.username] = '';
+        }
       }
     }
 
@@ -361,7 +416,7 @@ const UserRegistration = () => {
 
               <label>User Status:</label>
               <div className="radio-group">
-                <label><input type="radio" value="enable" checked={userStatus === 'enable'} onChange={() => setUserStatus('enable')} /> Enable</label>
+                <label><input type="radio" value="active" checked={userStatus === 'active'} onChange={() => setUserStatus('active')} /> Active</label>
                 <label><input type="radio" value="disable" checked={userStatus === 'disable'} onChange={() => setUserStatus('disable')} /> Disable</label>
               </div>
 
@@ -372,6 +427,22 @@ const UserRegistration = () => {
       )}
 
       {mode === 'search' && (
+
+            <>
+        <div className="search-fields">
+          <input  placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
+          <input  placeholder="First Name" value={firstName} onChange={e => setFirstName(e.target.value)} />
+          <input  placeholder="Last Name" value={lastName} onChange={e => setLastName(e.target.value)} />
+          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+          <select value={role} onChange={e => setRole(e.target.value)}>
+            <option value="">All Roles</option>
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+            <option value="parent">Parent</option>
+          </select>
+          <button className="search-button" onClick={handleSearch}>Search</button>
+        </div>
+
         <div className="table-container">
           <table className="search-table">
             <thead>
@@ -414,13 +485,14 @@ const UserRegistration = () => {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
     {mode === 'assign' && (
       <div className="form-container">
         <div className="form-field">
           <label>Select Parent</label>
-            <select value={selectedParent} onChange={(e) => setSelectedParent(e.target.value)}>
+            <select className="select-parent" value={selectedParent} onChange={(e) => setSelectedParent(e.target.value)}>
             <option value="">-- Select Parent --</option>
               {parents.map((parent, idx) => (
               <option key={idx} value={parent.username}>{parent.username}</option>
@@ -433,19 +505,39 @@ const UserRegistration = () => {
         <div className="form-field">
           <label>Assign Student Username</label>
           <input type="text" value={studentToAssign} onChange={(e) => setStudentToAssign(e.target.value)} placeholder="Enter student username" />
-          <button className="submit-button" onClick={handleAssignStudent}>Assign Student</button>
+          <button className="assign-button" onClick={handleAssignStudent}>Assign Student</button>
         </div>
 
         <div className="assigned-students-container">
           <h3>Assigned Students:</h3>
-          <ul className="assigned-students">
+          {/* <ul className="assigned-students">
             {assignedStudents.map((s, i) => (
               <li key={i}>
                 {s.username} ({s.fullName})
                 <button onClick={() => handleRemoveStudent(s.username)} style={{ marginLeft: '10px' }}>❌ Remove</button>
               </li>
           ))}
-          </ul>
+          </ul> */}
+          <table className="assigned-students-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Full Name</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assignedStudents.map((s, i) => (
+                <tr key={i}>
+                  <td>{s.username}</td>
+                  <td>{s.fullName}</td>
+                  <td>
+                    <button className="search-button" onClick={() => handleRemoveStudent(s.username)}>❌ Remove</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         </>

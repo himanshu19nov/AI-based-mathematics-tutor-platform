@@ -28,7 +28,7 @@ function App() {
             <Route path="/register" element={<UserRegistration />} />
             <Route path="/attend-quiz" element={<AttendQuiz />} />
             <Route path="/evaluate-quiz" element={<EvaluateQuiz />} />
-            <Route path="/evaluate-quiz" element={<ViewResult />} />
+            <Route path="/view-result" element={<ViewResult />} />
           </>
         )}
       </Routes>
