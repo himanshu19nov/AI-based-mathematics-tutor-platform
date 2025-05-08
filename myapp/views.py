@@ -343,8 +343,6 @@ from numpy.linalg import norm
 def cosine_similarity(a, b):
     return dot(a, b) / (norm(a) * norm(b))
 
-
-
 import traceback
 import requests
 from .models import KnowledgeBase
@@ -352,26 +350,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
 import cohere
-
-# def get_hf_embedding(text):
-    
-#     headers = {
-#         "Authorization": f"Bearer {os.getenv('HF_API_TOKEN')}",
-#         # "X-Use-Cache": "false",  
-#         "Content-Type": "application/json"
-#     }
-#     # response = requests.post(
-#     #     "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2",
-#     #     headers=headers,
-#     #     json={"inputs": [text]} 
-#     # )
-#     response = requests.post(
-#         "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2",
-#         headers=headers,
-#         json={"inputs": text}
-#     )
-#     response.raise_for_status()
-#     return response.json()[0]  # list of floats
 
 
 # Limit the total number of user+assistant messages to avoid API input error
@@ -588,21 +566,28 @@ from .models import Quiz, QuizQuestion
 import ast
 
 @api_view(['POST'])
-def attend_quiz(request):
-    quiz_name = request.data.get('quiz_name')
-    quiz_level = request.data.get('quiz_level')
-    category = request.data.get('category')
+def attend_quiz(request):   
 
-    if not quiz_name or not quiz_level or not category:
-        return Response({'error': 'quiz_name, quiz_level, and category are required'}, status=400)
+    # quiz_name = request.data.get('quiz_name')
+    # quiz_level = request.data.get('quiz_level')
+    # category = request.data.get('category')
+
+    # if not quiz_name or not quiz_level or not category:
+    #     return Response({'error': 'quiz_name, quiz_level, and category are required'}, status=400)
+
+    quiz_id = request.data.get('quiz_id')
+
+    if not quiz_id:
+        return Response({'error': 'quiz_id is required'}, status=400)
 
     try:
-        quiz = Quiz.objects.get(quiz_title=quiz_name, quiz_level=quiz_level)
+        # quiz = Quiz.objects.get(quiz_title=quiz_name, quiz_level=quiz_level)
+        quiz = Quiz.objects.get(quiz_id=quiz_id)
         quiz_questions = QuizQuestion.objects.filter(quiz=quiz).select_related('question')
 
         filtered_questions = []
         for qq in quiz_questions:
-            if qq.question.category.lower() == category.lower():
+            # if qq.question.category.lower() == category.lower():
                 try:
                     options = ast.literal_eval(qq.question.answers)
                 except:
@@ -611,11 +596,13 @@ def attend_quiz(request):
                 filtered_questions.append({
                     "questionId": qq.question.question_id,
                     "question": qq.question.question_text,
+                    "ans_type": qq.question.ansType, 
                     "options": options
                 })
 
         if not filtered_questions:
-            return Response({'error': 'No questions found for selected category and level.'}, status=404)
+            # return Response({'error': 'No questions found for selected category and level.'}, status=404)
+            return Response({'error': 'No questions found for this quiz.'}, status=404)
 
         return Response({'quiz': filtered_questions}, status=200)
 
@@ -628,14 +615,95 @@ def attend_quiz(request):
         return Response({'error': str(e)}, status=500)
 
 
+# @api_view(['POST'])
+# def submit_quiz(request):
+
+#     print("[DEBUG] Incoming data:", request.data)
+
+#     username = request.data.get('username')
+#     quiz_name = request.data.get('quiz_name')
+#     quiz_level = request.data.get('quiz_level')
+#     answers = request.data.get('answers')
+
+#     if not all([username, quiz_name, quiz_level, answers]):
+#         return Response({'error': 'Missing fields'}, status=400)
+
+#     try:
+#         user = User.objects.get(username=username)
+#     except User.DoesNotExist:
+#         return Response({'error': 'User not found'}, status=404)
+
+#     # ✅ Use filter + first to avoid MultipleObjectsReturned error
+#     quiz = Quiz.objects.filter(
+#         quiz_title=quiz_name,
+#         quiz_level=quiz_level,
+#         quiz_status='published'  # Optional: only allow published quizzes
+#     ).order_by('-created_at').first()
+
+#     if not quiz:
+#         return Response({'error': 'Quiz not found'}, status=404)
+
+#     try:
+#         quiz_questions = QuizQuestion.objects.filter(quiz=quiz).select_related('question')
+
+#         # Create the exam record
+#         exam = StudentExam.objects.create(student=user, quiz=quiz, score=0)
+
+#         score = 0
+
+#         for qq in quiz_questions:
+#             question = qq.question
+#             qid_str = str(question.question_id)
+#             user_answer = answers.get(qid_str, "").strip().lower()
+#             correct_answer = question.correct_answer.strip().lower()
+
+#             # 🧠 Debug logs
+#             print(f"[DEBUG] Question ID: {qid_str}")
+#             print(f"[DEBUG] Submitted Answer: '{user_answer}'")
+#             print(f"[DEBUG] Correct Answer:   '{correct_answer}'")
+
+#             is_correct = user_answer == correct_answer
+
+#             if is_correct:
+#                 score += 1
+#                 print(f"[DEBUG] -> Answer is correct.")
+#             else:
+#                 print(f"[DEBUG] -> Answer is incorrect.")
+
+#             Answer.objects.create(
+#                 student_exam=exam,
+#                 question=question,
+#                 student_answer=user_answer,
+#                 is_correct=is_correct
+#             )
+
+#         exam.score = score
+#         exam.save()
+
+#         print(f"[DEBUG] Final Score for {user.username}: {score}")
+
+#         return Response({
+#             'message': 'Quiz submitted successfully',
+#             'score': score,
+#             'total_questions': quiz_questions.count()
+#         }, status=200)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return Response({'error': str(e)}, status=500)
+
 @api_view(['POST'])
 def submit_quiz(request):
+    print("[DEBUG] Incoming data:", request.data)
+
+    # Extract the incoming data
     username = request.data.get('username')
-    quiz_name = request.data.get('quiz_name')
-    quiz_level = request.data.get('quiz_level')
+    quiz_id = request.data.get('quizId')
     answers = request.data.get('answers')
 
-    if not all([username, quiz_name, quiz_level, answers]):
+    # Validate the required data fields
+    if not all([username, quiz_id, answers]):
         return Response({'error': 'Missing fields'}, status=400)
 
     try:
@@ -643,14 +711,9 @@ def submit_quiz(request):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
-    # ✅ Use filter + first to avoid MultipleObjectsReturned error
-    quiz = Quiz.objects.filter(
-        quiz_title=quiz_name,
-        quiz_level=quiz_level,
-        quiz_status='published'  # Optional: only allow published quizzes
-    ).order_by('-created_at').first()
-
-    if not quiz:
+    try:
+        quiz = Quiz.objects.get(quiz_id=quiz_id)
+    except Quiz.DoesNotExist:
         return Response({'error': 'Quiz not found'}, status=404)
 
     try:
@@ -659,43 +722,36 @@ def submit_quiz(request):
         # Create the exam record
         exam = StudentExam.objects.create(student=user, quiz=quiz, score=0)
 
-        score = 0
-
+        # Iterate through the answers and create Answer records
         for qq in quiz_questions:
             question = qq.question
             qid_str = str(question.question_id)
-            user_answer = answers.get(qid_str, "").strip().lower()
+
+            # Get the student's answer for this question
+            # user_answer = answers.get(qid_str, "").strip().lower()
+            user_answer_raw = answers.get(qid_str, "")
+            if isinstance(user_answer_raw, list):
+                user_answer = [ans.strip().lower() for ans in user_answer_raw]
+            else:
+                user_answer = user_answer_raw.strip().lower()
             correct_answer = question.correct_answer.strip().lower()
 
-            # 🧠 Debug logs
+            # Debug logs to check answers
             print(f"[DEBUG] Question ID: {qid_str}")
             print(f"[DEBUG] Submitted Answer: '{user_answer}'")
             print(f"[DEBUG] Correct Answer:   '{correct_answer}'")
 
-            is_correct = user_answer == correct_answer
-
-            if is_correct:
-                score += 1
-                print(f"[DEBUG] -> Answer is correct.")
-            else:
-                print(f"[DEBUG] -> Answer is incorrect.")
-
+            # Create an Answer record for each question
             Answer.objects.create(
                 student_exam=exam,
                 question=question,
-                student_answer=user_answer,
-                is_correct=is_correct
+                student_answer=user_answer
             )
 
-        exam.score = score
         exam.save()
-
-        print(f"[DEBUG] Final Score for {user.username}: {score}")
 
         return Response({
             'message': 'Quiz submitted successfully',
-            'score': score,
-            'total_questions': quiz_questions.count()
         }, status=200)
 
     except Exception as e:
@@ -769,54 +825,144 @@ def view_result(request, user_id):
         return Response({'error': str(e)}, status=500)
 
 
+@api_view(['GET'])
+def get_usernames_by_quiz(request, quiz_id):
+    student_exams = StudentExam.objects.filter(quiz_id=quiz_id).select_related('student')
+    
+    user_attempts = [
+        {
+            "student_exam_id": exam.student_exam_id,
+            "username": exam.student.username,
+            "taken_at": exam.taken_at.isoformat()
+        }
+        for exam in student_exams
+    ]
 
-@api_view(['POST'])
-def evaluate_quiz(request):
-    data = request.data
-    username = data.get('username')
-    quiz_name = data.get('quiz_name')
-    quiz_level = data.get('quiz_level')
-    evaluations = data.get('evaluations')
+    return Response({"attempts": user_attempts})
 
-    if not all([username, quiz_name, quiz_level, evaluations]):
-        return Response({'error': 'Missing fields'}, status=400)
+def safe_parse(value):
+    if isinstance(value, str) and value.startswith("[") and value.endswith("]"):
+        try:
+            return ast.literal_eval(value)
+        except Exception:
+            return value  
+    return value
 
+@api_view(['GET'])
+def evaluate_quiz(request, examId):
     try:
-        user = User.objects.get(username=username)
-        quiz = Quiz.objects.filter(
-            quiz_title=quiz_name,
-            quiz_level=quiz_level
-        ).order_by('-created_at').first()
+        student_exam = StudentExam.objects.select_related('quiz', 'student').get(student_exam_id=examId)
+        quiz = student_exam.quiz
+        student = student_exam.student
 
-        if not quiz:
-            return Response({'error': 'Quiz not found'}, status=404)
+        answers = Answer.objects.filter(student_exam=student_exam).select_related('question')
 
-        exam = StudentExam.objects.filter(student=user, quiz=quiz).order_by('-taken_at').first()
+        quiz_question_scores = QuizQuestion.objects.filter(quiz=quiz).values_list('question__question_id', 'score')
+        score_map = {q_id: score for q_id, score in quiz_question_scores}
 
-        if not exam:
-            return Response({'error': 'Exam not found'}, status=404)
+        question_data = []
+        answers_dict = {}
 
-        total_score = 0
+        for ans in answers:
+            question = ans.question
 
-        for qid, eval_data in evaluations.items():
-            question = Question.objects.get(question_id=int(qid))
-            answer = Answer.objects.get(student_exam=exam, question=question)
+            options = safe_parse(question.answers)
+            student_answer = safe_parse(ans.student_answer)
 
-            answer.student_mark = eval_data.get('mark', 0)
-            answer.teacher_comment = eval_data.get('comment', '')
+            q_data = {
+                "questionId": question.question_id,
+                "question": question.question_text,
+                "ans_type": question.ansType,
+                "options": options,
+                "user_answer": student_answer,
+                "correct_answer": question.correct_answer,
+                "student_mark": ans.student_mark,
+                "teacher_comment": ans.teacher_comment,
+                "is_correct": ans.is_correct,
+                "assigned_score": score_map.get(question.question_id, None) 
+            }
+            question_data.append(q_data)
+            answers_dict[str(question.question_id)] = ans.student_answer
+
+        return Response({
+            "quiz_id": quiz.quiz_id,
+            "quiz_title": quiz.quiz_title,
+            "quiz_level": quiz.quiz_level,
+            "username": student.username,
+            "score": student_exam.score,
+            "questions": question_data,
+            "answers": answers_dict
+        })
+
+    except StudentExam.DoesNotExist:
+        return Response({"error": "Exam not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PUT'])
+def submit_feedback(request, examId):
+    try:
+        student_exam = StudentExam.objects.get(student_exam_id=examId)
+
+        for item in request.data.get('questions', []):
+            question_id = item.get('questionId')
+            mark = item.get('student_mark')
+            comment = item.get('teacher_comment')
+
+            answer = Answer.objects.get(student_exam=student_exam, question_id=question_id)
+            answer.student_mark = mark
+            answer.teacher_comment = comment
             answer.save()
 
-            total_score += answer.student_mark
-
-        exam.score = total_score
-        exam.save()
-
-        return Response({'message': 'Evaluation saved', 'score': total_score}, status=200)
-
+        return Response({'message': 'Feedback updated successfully'})
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return Response({'error': str(e)}, status=500)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['POST'])
+# def evaluate_quiz(request):
+#     data = request.data
+#     username = data.get('username')
+#     quiz_name = data.get('quiz_name')
+#     quiz_level = data.get('quiz_level')
+#     evaluations = data.get('evaluations')
+
+#     if not all([username, quiz_name, quiz_level, evaluations]):
+#         return Response({'error': 'Missing fields'}, status=400)
+
+#     try:
+#         user = User.objects.get(username=username)
+#         quiz = Quiz.objects.filter(
+#             quiz_title=quiz_name,
+#             quiz_level=quiz_level
+#         ).order_by('-created_at').first()
+
+#         if not quiz:
+#             return Response({'error': 'Quiz not found'}, status=404)
+
+#         exam = StudentExam.objects.filter(student=user, quiz=quiz).order_by('-taken_at').first()
+
+#         if not exam:
+#             return Response({'error': 'Exam not found'}, status=404)
+
+#         total_score = 0
+
+#         for qid, eval_data in evaluations.items():
+#             question = Question.objects.get(question_id=int(qid))
+#             answer = Answer.objects.get(student_exam=exam, question=question)
+
+#             answer.student_mark = eval_data.get('mark', 0)
+#             answer.teacher_comment = eval_data.get('comment', '')
+#             answer.save()
+
+#             total_score += answer.student_mark
+
+#         exam.score = total_score
+#         exam.save()
+
+#         return Response({'message': 'Evaluation saved', 'score': total_score}, status=200)
+
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return Response({'error': str(e)}, status=500)
 
 # Used for user registration
 
