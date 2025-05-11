@@ -125,7 +125,13 @@ def update_user(request, username):
             user.password = make_password(data['password'])
 
         user.role = data.get('role', user.role)
-        user.academicLevel = data.get('academicLevel', user.academicLevel)
+        # user.academicLevel = data.get('academicLevel', user.academicLevel)
+        academic_level = data.get('academicLevel')
+        if academic_level is not None:
+            if isinstance(academic_level, list):
+                user.academicLevel = ",".join(academic_level)
+            else:
+                user.academicLevel = academic_level
         user.userStatus = data.get('userStatus', user.userStatus)
 
         user.save()
@@ -148,6 +154,9 @@ def user_login(request):
         user = User.objects.get(username=username)
         if check_password(password, user.password):
             
+            if user.userStatus.lower() == "disable":
+                return Response({'error': 'Account is disabled. Please contact support.'}, status=status.HTTP_403_FORBIDDEN)
+
             # Generate JWT token on successful login
             refresh = RefreshToken.for_user(user)
             # access_token = str(refresh.access_token)
@@ -782,48 +791,115 @@ def delete_quiz(request, quiz_id):
 
 
 
+# @api_view(['GET'])
+# def view_result(request, user_id):
+#     try:
+#         user = User.objects.get(id=user_id)
+#         exams = StudentExam.objects.filter(student=user).select_related('quiz')
+
+#         result = []
+
+#         for exam in exams:
+#             answers = Answer.objects.filter(student_exam=exam).select_related('question')
+#             answer_data = []
+
+#             for a in answers:
+#                 try:
+#                     answer_data.append({
+#                         "question_id": a.question.question_id,
+#                         "question_text": a.question.question_text,
+#                         "student_answer": a.student_answer,
+#                         "is_correct": a.is_correct,
+#                         "mark": getattr(a, 'student_mark', None),
+#                         "comment": getattr(a, 'teacher_comment', None)
+#                     })
+#                 except Exception as e:
+#                     print(f"[ERROR] Skipping broken answer record (Answer ID: {a.answer_id}): {str(e)}")
+
+#             result.append({
+#                 "quiz_title": exam.quiz.quiz_title,
+#                 "quiz_level": exam.quiz.quiz_level,
+#                 "score": exam.score,
+#                 "taken_at": exam.taken_at,
+#                 "answers": answer_data
+#             })
+
+#         return Response(result, status=200)
+
+#     except User.DoesNotExist:
+#         return Response({'error': 'User not found'}, status=404)
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return Response({'error': str(e)}, status=500)
+
+
+from .models import Quiz, Question, StudentExam, Answer
+from statistics import median
+
 @api_view(['GET'])
-def view_result(request, user_id):
+def quiz_overall_stats(request, quiz_id):
     try:
-        user = User.objects.get(id=user_id)
-        exams = StudentExam.objects.filter(student=user).select_related('quiz')
+        quiz = Quiz.objects.get(pk=quiz_id)
+    except Quiz.DoesNotExist:
+        return JsonResponse({'error': 'Quiz not found'}, status=404)
 
-        result = []
+    # Get all questions in the quiz through QuizQuestion
+    quiz_questions = QuizQuestion.objects.filter(quiz=quiz).select_related('question')
 
-        for exam in exams:
-            answers = Answer.objects.filter(student_exam=exam).select_related('question')
-            answer_data = []
+    # Get all student exams for the quiz
+    student_exams = StudentExam.objects.filter(quiz=quiz)
 
-            for a in answers:
-                try:
-                    answer_data.append({
-                        "question_id": a.question.question_id,
-                        "question_text": a.question.question_text,
-                        "student_answer": a.student_answer,
-                        "is_correct": a.is_correct,
-                        "mark": getattr(a, 'student_mark', None),
-                        "comment": getattr(a, 'teacher_comment', None)
-                    })
-                except Exception as e:
-                    print(f"[ERROR] Skipping broken answer record (Answer ID: {a.answer_id}): {str(e)}")
+    # Get all answers linked to these student exams
+    answers = Answer.objects.filter(student_exam__in=student_exams)
 
-            result.append({
-                "quiz_title": exam.quiz.quiz_title,
-                "quiz_level": exam.quiz.quiz_level,
-                "score": exam.score,
-                "taken_at": exam.taken_at,
-                "answers": answer_data
-            })
+    # Calculate total score for each student exam by summing student_mark
+    total_scores = []
+    total_score_for_quiz = 0
+    for student_exam in student_exams:
+        # Get all answers for this student_exam
+        student_answers = answers.filter(student_exam=student_exam)
+        
+        # Sum the student_mark for all answers related to this student_exam
+        total_score = sum([ans.student_mark for ans in student_answers if ans.student_mark is not None])
 
-        return Response(result, status=200)
+        # Update the student_exam score with the total score
+        student_exam.score = total_score
+        student_exam.save()
 
-    except User.DoesNotExist:
-        return Response({'error': 'User not found'}, status=404)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return Response({'error': str(e)}, status=500)
+        # Add this total score to the list of total scores
+        total_scores.append(total_score)
+        total_score_for_quiz += total_score
 
+    # Calculate per-question stats (correct/incorrect counts)
+    question_stats = []
+    for qq in quiz_questions:
+        q_id = qq.question.question_id
+        question_answers = answers.filter(question_id=q_id)
+
+        total_attempts = question_answers.count()
+        correct_count = question_answers.filter(is_correct=True).count()
+        incorrect_count = total_attempts - correct_count
+
+        question_stats.append({
+            'question_id': q_id,
+            'question_text': qq.question.question_text,  
+            'correct_count': correct_count, 
+            'incorrect_count': incorrect_count,
+        })
+
+    # Calculate the mean and median of the total scores
+    average_score = sum(total_scores) / len(total_scores) if total_scores else 0
+    median_score = median(total_scores) if total_scores else 0
+
+    return JsonResponse({
+        'quiz_title': quiz.quiz_title,
+        'total_participants': student_exams.count(),
+        'question_stats': question_stats,  # Ensure we're sending correct question stats
+        'average_score': average_score,
+        'median_score': median_score,
+        'total_score': quiz.total_marks,
+    })
 
 @api_view(['GET'])
 def get_usernames_by_quiz(request, quiz_id):
@@ -888,6 +964,7 @@ def evaluate_quiz(request, examId):
             "quiz_id": quiz.quiz_id,
             "quiz_title": quiz.quiz_title,
             "quiz_level": quiz.quiz_level,
+            "total_marks": quiz.total_marks,
             "username": student.username,
             "score": student_exam.score,
             "questions": question_data,
@@ -902,14 +979,22 @@ def submit_feedback(request, examId):
     try:
         student_exam = StudentExam.objects.get(student_exam_id=examId)
 
+        quiz_question_scores = QuizQuestion.objects.filter(quiz=student_exam.quiz).values_list('question__question_id', 'score')
+        score_map = {q_id: score for q_id, score in quiz_question_scores}
+
         for item in request.data.get('questions', []):
             question_id = item.get('questionId')
-            mark = item.get('student_mark')
+            mark = float(item.get('student_mark', 0))
             comment = item.get('teacher_comment')
+
+            assigned_score = score_map.get(int(question_id), None)
 
             answer = Answer.objects.get(student_exam=student_exam, question_id=question_id)
             answer.student_mark = mark
             answer.teacher_comment = comment
+            if assigned_score is not None:
+                answer.is_correct = (mark == assigned_score)
+                print(answer.is_correct)
             answer.save()
 
         return Response({'message': 'Feedback updated successfully'})
@@ -1194,3 +1279,146 @@ class KnowledgeBaseDeleteView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except KnowledgeBase.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+@csrf_exempt
+@api_view(['POST'])
+def create_question_ai(request):
+    try:
+        TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+        if not TOGETHER_API_KEY:
+            return Response({"error": "Together API key not set."}, status=500)
+
+        category = request.data.get("category")
+        difficulty = request.data.get("difficulty")
+        level = request.data.get("level", "Year 8")
+
+        if not category or not difficulty:
+            return Response({"error": "Missing category or difficulty."}, status=400)
+
+
+        # Prompt to generate the question in structured format
+        prompt = (
+            f"Generate one {difficulty.lower()} level {category.lower()} question for a {level} student. "
+            f"Return the response as JSON with keys: 'question_text', 'answers' (list of 4), and 'correct_answer'."
+        )
+
+
+        headers = {
+            "Authorization": f"Bearer {TOGETHER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+
+        payload = {
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "messages": [
+                {"role": "system", "content": "You are a helpful AI that creates math questions in JSON format only."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "top_p": 0.95,
+            "max_tokens": 512
+        }
+
+
+        # Call Together.ai API
+        response = requests.post("https://api.together.xyz/v1/chat/completions", headers=headers, json=payload)
+        result = response.json()
+
+        ai_content = result["choices"][0]["message"]["content"]
+
+
+        # Attempt to safely evaluate the JSON response
+        import json
+        try:
+            question_data = json.loads(ai_content)
+        except json.JSONDecodeError:
+            return Response({"error": "AI did not return valid JSON.", "raw": ai_content}, status=502)
+
+        # Save to DB using your existing Question model
+        new_question = Question.objects.create(
+            question_text=question_data["question_text"],
+            correct_answer=question_data["correct_answer"],
+            category=category,
+            difficulty_level=difficulty,
+            teacher_id=0  # Replace or remove if needed
+        )
+
+
+        return Response({
+            "message": "AI-generated question created successfully.",
+            "question": {
+                "question_id": new_question.question_id,
+                "question_text": new_question.question_text,
+                "correct_answer": new_question.correct_answer,
+                "category": new_question.category,
+                "difficulty": new_question.difficulty_level
+            }
+        }, status=201)
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": "Something went wrong", "details": str(e)}, status=500)
+    
+
+
+
+
+@csrf_exempt
+@api_view(['POST'])
+def evaluate_quiz_ai(request):
+
+    try:
+        TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+        if not TOGETHER_API_KEY:
+            return Response({"error": "Together API key not set."}, status=500)
+
+        question_text = request.data.get("question_text")
+        student_answer = request.data.get("student_answer")
+        correct_answer = request.data.get("correct_answer")
+
+        if not all([question_text, student_answer, correct_answer]):
+            return Response({"error": "Missing required fields."}, status=400)
+
+        prompt = (
+            f"Question: {question_text}\n"
+            f"Student Answer: {student_answer}\n"
+            f"Correct Answer: {correct_answer}\n"
+            f"Evaluate the student’s answer. Return a JSON object with: "
+            f"'is_correct' (true/false), 'score' (0 or 1), and 'feedback' (string)."
+        )
+
+
+        headers = {
+            "Authorization": f"Bearer {TOGETHER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+
+        payload = {
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "messages": [
+                {"role": "system", "content": "You are a helpful math tutor. Respond only in JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.5,
+            "top_p": 0.9,
+            "max_tokens": 256
+        }
+
+        response = requests.post("https://api.together.xyz/v1/chat/completions", headers=headers, json=payload)
+        result = response.json()
+        ai_content = result["choices"][0]["message"]["content"]
+
+        import json
+        try:
+            evaluation = json.loads(ai_content)
+        except json.JSONDecodeError:
+            return Response({"error": "AI returned invalid JSON.", "raw": ai_content}, status=502)
+
+        return Response(evaluation, status=200)
+
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": "Something went wrong", "details": str(e)}, status=500)

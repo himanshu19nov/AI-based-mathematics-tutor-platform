@@ -28,10 +28,16 @@ const Login = ({ setIsAuthenticated }) => {
 
 
   const handleLogin = async (event) => {
-    event.preventDefault(); // Prevent page reload on form submission
+    event.preventDefault(); 
 
-    setLoading(true); // Start loading
-    setErrorMessage(''); // Clear previous errors
+    const isValidInput = (text) => /^[a-zA-Z0-9_@.-]{1,100}$/.test(text);
+    if (!isValidInput(username) || !isValidInput(password)) {
+      setErrorMessage("Invalid characters in username or password.");
+      return;
+    }
+
+    setLoading(true); 
+    setErrorMessage(''); 
   
     try {
       // const response = await fetch('http://127.0.0.1:8000/api/login/', {
@@ -60,7 +66,8 @@ const Login = ({ setIsAuthenticated }) => {
         navigate('/platform');
       } else {
         const errorData = await response.json();
-        setErrorMessage(errorData.detail || 'Invalid username or password');
+
+        setErrorMessage(errorData.error || 'Invalid username or password');
       }
     } catch (error) {
       setErrorMessage('There was an error connecting to the backend');

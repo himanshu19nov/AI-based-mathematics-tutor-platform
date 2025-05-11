@@ -35,7 +35,8 @@ urlpatterns = [
     # path('api/questions/<int:question_id>/', views.update_question, name='update_question'),
     path('api/quiz/<int:quiz_id>/publish/', views.publish_quiz, name='publish_quiz'),
     path('api/quiz/<int:quiz_id>/delete/', views.delete_quiz, name='delete_quiz'),
-    path('api/view_result/<int:user_id>/', views.view_result, name='view_result'),
+    # path('api/view_result/<int:user_id>/', views.view_result, name='view_result'),
+    path('api/quiz_overall_stats/<int:quiz_id>/', views.quiz_overall_stats, name='quiz_overall_stats'),
     path('api/quiz_usernames/<int:quiz_id>/', views.get_usernames_by_quiz, name='get_usernames_by_quiz'),
     # path('api/evaluate_quiz/', views.evaluate_quiz, name='evaluate_quiz'),
     path('api/evaluate_quiz/<int:examId>/', views.evaluate_quiz, name='evaluate_quiz'),
@@ -48,7 +49,8 @@ urlpatterns = [
     path('api/upload_knowledge/', views.upload_knowledge_document),
     path('api/knowledge/', KnowledgeBaseListView.as_view(), name='knowledge-list'),
     path('api/knowledge/<int:id>/', KnowledgeBaseDeleteView.as_view(), name='knowledge-delete'),
-
+    path('api/create_question_ai/', views.create_question_ai, name='create_question_ai'),
+    path('api/evaluate_quiz_ai/', views.evaluate_quiz_ai, name='evaluate_quiz_ai'),
 
 ]
 
