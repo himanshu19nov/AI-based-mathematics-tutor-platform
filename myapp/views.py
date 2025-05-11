@@ -1279,3 +1279,146 @@ class KnowledgeBaseDeleteView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except KnowledgeBase.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+@csrf_exempt
+@api_view(['POST'])
+def create_question_ai(request):
+    try:
+        TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+        if not TOGETHER_API_KEY:
+            return Response({"error": "Together API key not set."}, status=500)
+
+        category = request.data.get("category")
+        difficulty = request.data.get("difficulty")
+        level = request.data.get("level", "Year 8")
+
+        if not category or not difficulty:
+            return Response({"error": "Missing category or difficulty."}, status=400)
+
+
+        # Prompt to generate the question in structured format
+        prompt = (
+            f"Generate one {difficulty.lower()} level {category.lower()} question for a {level} student. "
+            f"Return the response as JSON with keys: 'question_text', 'answers' (list of 4), and 'correct_answer'."
+        )
+
+
+        headers = {
+            "Authorization": f"Bearer {TOGETHER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+
+        payload = {
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "messages": [
+                {"role": "system", "content": "You are a helpful AI that creates math questions in JSON format only."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7,
+            "top_p": 0.95,
+            "max_tokens": 512
+        }
+
+
+        # Call Together.ai API
+        response = requests.post("https://api.together.xyz/v1/chat/completions", headers=headers, json=payload)
+        result = response.json()
+
+        ai_content = result["choices"][0]["message"]["content"]
+
+
+        # Attempt to safely evaluate the JSON response
+        import json
+        try:
+            question_data = json.loads(ai_content)
+        except json.JSONDecodeError:
+            return Response({"error": "AI did not return valid JSON.", "raw": ai_content}, status=502)
+
+        # Save to DB using your existing Question model
+        new_question = Question.objects.create(
+            question_text=question_data["question_text"],
+            correct_answer=question_data["correct_answer"],
+            category=category,
+            difficulty_level=difficulty,
+            teacher_id=0  # Replace or remove if needed
+        )
+
+
+        return Response({
+            "message": "AI-generated question created successfully.",
+            "question": {
+                "question_id": new_question.question_id,
+                "question_text": new_question.question_text,
+                "correct_answer": new_question.correct_answer,
+                "category": new_question.category,
+                "difficulty": new_question.difficulty_level
+            }
+        }, status=201)
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": "Something went wrong", "details": str(e)}, status=500)
+    
+
+
+
+
+@csrf_exempt
+@api_view(['POST'])
+def evaluate_quiz_ai(request):
+
+    try:
+        TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+        if not TOGETHER_API_KEY:
+            return Response({"error": "Together API key not set."}, status=500)
+
+        question_text = request.data.get("question_text")
+        student_answer = request.data.get("student_answer")
+        correct_answer = request.data.get("correct_answer")
+
+        if not all([question_text, student_answer, correct_answer]):
+            return Response({"error": "Missing required fields."}, status=400)
+
+        prompt = (
+            f"Question: {question_text}\n"
+            f"Student Answer: {student_answer}\n"
+            f"Correct Answer: {correct_answer}\n"
+            f"Evaluate the student’s answer. Return a JSON object with: "
+            f"'is_correct' (true/false), 'score' (0 or 1), and 'feedback' (string)."
+        )
+
+
+        headers = {
+            "Authorization": f"Bearer {TOGETHER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+
+        payload = {
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "messages": [
+                {"role": "system", "content": "You are a helpful math tutor. Respond only in JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.5,
+            "top_p": 0.9,
+            "max_tokens": 256
+        }
+
+        response = requests.post("https://api.together.xyz/v1/chat/completions", headers=headers, json=payload)
+        result = response.json()
+        ai_content = result["choices"][0]["message"]["content"]
+
+        import json
+        try:
+            evaluation = json.loads(ai_content)
+        except json.JSONDecodeError:
+            return Response({"error": "AI returned invalid JSON.", "raw": ai_content}, status=502)
+
+        return Response(evaluation, status=200)
+
+
+    except Exception as e:
+        traceback.print_exc()
+        return Response({"error": "Something went wrong", "details": str(e)}, status=500)

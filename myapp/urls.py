@@ -49,7 +49,8 @@ urlpatterns = [
     path('api/upload_knowledge/', views.upload_knowledge_document),
     path('api/knowledge/', KnowledgeBaseListView.as_view(), name='knowledge-list'),
     path('api/knowledge/<int:id>/', KnowledgeBaseDeleteView.as_view(), name='knowledge-delete'),
-
+    path('api/create_question_ai/', views.create_question_ai, name='create_question_ai'),
+    path('api/evaluate_quiz_ai/', views.evaluate_quiz_ai, name='evaluate_quiz_ai'),
 
 ]
 
