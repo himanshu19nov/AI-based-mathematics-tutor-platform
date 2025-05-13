@@ -1281,6 +1281,7 @@ class KnowledgeBaseDeleteView(APIView):
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         
 @csrf_exempt
+@csrf_exempt
 @api_view(['POST'])
 def create_question_ai(request):
     try:
@@ -1295,19 +1296,16 @@ def create_question_ai(request):
         if not category or not difficulty:
             return Response({"error": "Missing category or difficulty."}, status=400)
 
-
-        # Prompt to generate the question in structured format
+        # Generate AI prompt
         prompt = (
             f"Generate one {difficulty.lower()} level {category.lower()} question for a {level} student. "
             f"Return the response as JSON with keys: 'question_text', 'answers' (list of 4), and 'correct_answer'."
         )
 
-
         headers = {
             "Authorization": f"Bearer {TOGETHER_API_KEY}",
             "Content-Type": "application/json"
         }
-
 
         payload = {
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
@@ -1320,16 +1318,13 @@ def create_question_ai(request):
             "max_tokens": 512
         }
 
-
         # Call Together.ai API
         response = requests.post("https://api.together.xyz/v1/chat/completions", headers=headers, json=payload)
         result = response.json()
 
         ai_content = result["choices"][0]["message"]["content"]
 
-
         # Attempt to safely evaluate the JSON response
-        import json
         try:
             question_data = json.loads(ai_content)
         except json.JSONDecodeError:
@@ -1341,9 +1336,8 @@ def create_question_ai(request):
             correct_answer=question_data["correct_answer"],
             category=category,
             difficulty_level=difficulty,
-            teacher_id=0  # Replace or remove if needed
+            # Teacher-related information can be managed elsewhere (e.g., through a Quiz or User relation)
         )
-
 
         return Response({
             "message": "AI-generated question created successfully.",
@@ -1359,8 +1353,6 @@ def create_question_ai(request):
     except Exception as e:
         traceback.print_exc()
         return Response({"error": "Something went wrong", "details": str(e)}, status=500)
-    
-
 
 
 

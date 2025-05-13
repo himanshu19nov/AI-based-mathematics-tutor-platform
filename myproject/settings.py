@@ -31,7 +31,6 @@ SECRET_KEY = 'django-insecure-2labv%fiza#8l^ue7pxvlripfw0lo^vynmm(se2p(6oyj+nuuo
 DEBUG = True
 # DEBUG = False
 
-# ALLOWED_HOSTS = []
 ALLOWED_HOSTS = ['*']
 
 
@@ -85,37 +84,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'myproject.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'Capstone',
-#         'USER': 'postgres',
-#         'PASSWORD': '1313',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-
-#     }
-# }
-
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.environ.get('DB_NAME', 'default_db_name'),  # Use environment variable for DB name
-#         'USER': os.environ.get('DB_USER', 'default_db_user'),  # Use environment variable for DB user
-#         'PASSWORD': os.environ.get('DB_PASSWORD', 'default_db_password'),  # Use environment variable for DB password
-#         'HOST': os.environ.get('DB_HOST', 'localhost'),  # Use environment variable for DB host
-#         'PORT': os.environ.get('DB_PORT', '5432'),  # Use environment variable for DB port
-
-#     }
-# }
-
-# PRODUCTION DATABASE
+# Database configuration using environment variables
 DATABASES = {
-    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+    'default': dj_database_url.config(
+        default=f"postgres://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+    )
 }
 
 
@@ -157,16 +130,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'myapp/static']
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# CORS_ALLOW_HEADERS = [
-#     'content-type',
-#     'authorization',
-# ]
-
-# CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOWED_ORIGINS = [
     "https://mts-platform.onrender.com",
