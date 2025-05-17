@@ -450,6 +450,11 @@ def ask_ai(request):
             messages = [
             {"role": "system", 
              "content": f"You are a helpful math tutor. Use the provided knowledge to assist the student. Here is some relevant knowledge: {context_text.strip()}. {personal_instruction}"}
+            #  "content": (
+            #     f"You are a helpful math tutor. Use only the information provided in the knowledge base below. "
+            #     f"=== KNOWLEDGE BASE START ===\n{context_text.strip()}\n=== KNOWLEDGE BASE END ===\n\n"
+            #     f"{personal_instruction}"
+            # )}
         ]
         else:
             messages = [
