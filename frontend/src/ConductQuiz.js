@@ -8,6 +8,7 @@ import axios from 'axios';
 
 const App = () => {
   const apiUrl = process.env.REACT_APP_API_URL;
+  const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showQuizSetup, setShowQuizSetup] = useState(false);
   const [showQuestionSearch, setShowQuestionSearch] = useState(false);
@@ -140,7 +141,9 @@ const App = () => {
     }
   };
 
-  const handleAIGenerate = () => {
+
+
+  const handleAIGenerate = async() => {
 
     // validation check
     if (!formData.difficulty_level) {
@@ -152,17 +155,53 @@ const App = () => {
       return;
     }
 
-    setFormData(prev=>(
-      {
-        ...prev,
-        difficulty_level: 'year_2',
-        question_text: 'What shape has 4 sides and all sides are the same length?',
-        category: 'Geometry',
-        ansType: 'single_choice',
-        answers: ['Rectangle', 'Triangle', 'Circle', 'Square', '', '','','', '',''], 
-        correct_answer: 'Square',
+    setLoading(true); 
+
+
+    try {
+      const response = await fetch(`${apiUrl}/api/create_question_ai/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add auth headers if needed (e.g., JWT)
+        },
+        body: JSON.stringify({
+          category: formData.category,
+          difficulty: formData.difficulty_level,
+          // level: 'Year 8' // Optional; adjust if you collect it from user
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.status === 502) {
+        alert('AI is temporarily unavailable. Please try again shortly.');
+        return;
       }
-    ));
+
+      if (!response.ok) {
+        console.error('AI error:', data);
+        alert(data.error || 'AI generation failed.');
+        return;
+      }
+
+      // Fill formData with AI-generated content
+      setFormData(prev => ({
+        ...prev,
+        question_text: data.question.question_text,
+        correct_answer: data.question.correct_answer,
+        answers: [
+          ...(data.question.answers || []), // Add empty strings if fewer than 10
+          '', '', '', '', '', '', ''
+        ].slice(0, 10),
+        ansType: 'single_choice'
+      }));
+    } catch (err) {
+      console.error('Error calling AI:', err);
+      alert('Something went wrong while generating the question.');
+    } finally {
+    setLoading(false); // 🔓 Re-enable button
+    }
   };
 
   return (
@@ -267,8 +306,9 @@ const App = () => {
             <div className="ai-generate-container">
                 <label className="AI-label">Select Level and Category to generate Question</label>
                 {/* AI Generate Button */}
-                <button className="ai-button" onClick={handleAIGenerate}>
-                  AI Generate
+
+                <button className="ai-button" onClick={handleAIGenerate} disabled={loading}>
+                  {loading ? 'Generating...' : 'AI Generate'}
                 </button>
                 
             </div>
@@ -285,7 +325,21 @@ const App = () => {
                 placeholder="Please type question here"
                 rows="5"
               />
-              <input type="file" name="questionImage" id="questionImage" />
+              {/* <input type="file" name="questionImage" id="questionImage" /> */}
+            </div>
+
+                        {/* Correct Answer Input */}
+            <div className="form-row">
+              <label htmlFor="correct_answer">Correct Answer</label>
+              <textarea
+                id="correct_answer"
+                name="correct_answer"
+                value={formData.correct_answer}
+                onChange={handleInputChange}
+                placeholder="Please type correct answer here"
+                rows="3"
+              />
+              
             </div>
 
             {/* Answer Type */}
@@ -343,22 +397,6 @@ const App = () => {
                 <button className="add-button" onClick={handleAddAnswerOption}>Add Answer Option</button>
               </div>
             )}
-
-
-            {/* Correct Answer Input */}
-            <div className="form-row">
-              <label htmlFor="correct_answer">Correct Answer</label>
-              <textarea
-                id="correct_answer"
-                name="correct_answer"
-                value={formData.correct_answer}
-                onChange={handleInputChange}
-                placeholder="Please type correct answer here"
-                rows="3"
-              />
-              
-            </div>
-
 
             <div className="form-row">
               <div className="button-group">
