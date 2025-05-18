@@ -134,7 +134,7 @@ const App = () => {
       // const response = await axios.post('http://localhost:8000/api/create_question/', formData);
       const response = await axios.post(`${apiUrl}/api/create_question/`, formData);
       console.log('Backend Response:', response.data);
-      alert('Form submitted successfully!');
+      alert('Question created successfully!');
     } catch (error) {
       console.error('Error submitting the form:', error);
       alert('Error submitting the form');
