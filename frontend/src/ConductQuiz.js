@@ -168,7 +168,6 @@ const App = () => {
         body: JSON.stringify({
           category: formData.category,
           difficulty: formData.difficulty_level,
-          // level: 'Year 8' // Optional; adjust if you collect it from user
         })
       });
 
@@ -190,10 +189,7 @@ const App = () => {
         ...prev,
         question_text: data.question.question_text,
         correct_answer: data.question.correct_answer,
-        answers: [
-          ...(data.question.answers || []), // Add empty strings if fewer than 10
-          '', '', '', '', '', '', ''
-        ].slice(0, 10),
+        answers: Array(3).fill(''),
         ansType: 'single_choice'
       }));
     } catch (err) {

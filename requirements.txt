@@ -16,3 +16,4 @@ PyMuPDF
 numpy
 scikit-learn
 cohere
+sympy>=1.12

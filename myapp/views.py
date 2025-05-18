@@ -1479,9 +1479,69 @@ def create_question_ai(request):
 #         traceback.print_exc()
 #         return Response({"error": "Something went wrong", "details": str(e)}, status=500)
 
+import re
+# Ensure AI evaluation return valid format
+def extract_json_array(text):
+    # Extract first valid JSON array in the response
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r"\[\s*{.*?}\s*\]", text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+    return None
+
+
+from sympy import sympify, simplify
+from sympy.parsing.sympy_parser import parse_expr
+import json
+import random
+
+def math_equivalent(ans1: str, ans2: str) -> bool:
+    try:
+        def clean(x):
+            return re.sub(r'[^\d\w\^\+\-\*/\.\(\)]', '', x.lower())
+        expr1 = simplify(sympify(clean(ans1)))
+        expr2 = simplify(sympify(clean(ans2)))
+        return expr1.equals(expr2)
+    except Exception:
+        return False
+
+def numeric_equivalent(ans1: str, ans2: str, tolerance: float = 0.01) -> bool:
+    try:
+        def extract_number(s):
+            nums = re.findall(r"\d+(?:\.\d+)?", s)
+            return float(nums[0]) if nums else None
+        n1 = extract_number(ans1)
+        n2 = extract_number(ans2)
+        if n1 is not None and n2 is not None:
+            return abs(n1 - n2) <= tolerance * max(1, abs(n2))
+        return False
+    except Exception:
+        return False
+
+
 @csrf_exempt
 @api_view(['POST'])
 def evaluate_quiz_ai(request):
+
+
+    positive_feedbacks = [
+        "Correct!",
+        "Well done!",
+        "Great job!",
+        "That's right!",
+        "Excellent work!",
+        "You nailed it!",
+        "Perfect answer!",
+        "Nice one!",
+        "Spot on!",
+        "You got it!"
+    ]
+
     try:
         TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
         if not TOGETHER_API_KEY:
@@ -1492,13 +1552,21 @@ def evaluate_quiz_ai(request):
             return Response({"error": "Missing or invalid questions field."}, status=400)
 
         # Create a combined prompt for all questions
-        combined_prompt = "Evaluate the following student answers. For each, return a JSON object with: is_correct, score (0 to assigned_score), feedback.\n\n"
+        combined_prompt = (
+            "You are evaluating student math answers. For each question, do the math yourself. "
+            "Only mark is_correct: true if the student answer is mathematically accurate. "
+            "Give feedback with reasoning steps when the answer is wrong.\n\n"
+            "Return JSON: [ { is_correct, score, feedback }, ... ]\n"
+        )
+ 
+        
         for i, q in enumerate(questions):
             combined_prompt += (
                 f"Question {i+1}: {q['question_text']}\n"
-                f"Student Answer: {q['student_answer']}\n"
-                f"Correct Answer: {q['correct_answer']}\n"
-                f"Assigned Score: {q.get('assigned_score', 1)}\n\n"
+                f"- Student Answer: {q['student_answer']}\n"
+                f"- Correct Answer: {q['correct_answer']}\n"
+                f"- Compare: Is \"{q['student_answer']}\" mathematically equal to \"{q['correct_answer']}\"?\n"
+                f"- Assigned Score: {q.get('assigned_score', 1)}\n\n"
             )
 
         headers = {
@@ -1509,7 +1577,12 @@ def evaluate_quiz_ai(request):
         payload = {
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "messages": [
-                {"role": "system", "content": "You are a helpful math tutor. Respond with a JSON array with one object per question."},
+                {"role": "system", "content": 
+                    "You are a strict math evaluator. Return a JSON array with one object per question, each including:\n"
+                    " - is_correct (boolean)\n"
+                    " - score (0 to assigned_score)\n"
+                    " - feedback (brief explanation).\n"
+                    "Do not assume student answers are correct unless they exactly match or show valid reasoning."},
                 {"role": "user", "content": combined_prompt}
             ],
             "temperature": 0.5,
@@ -1522,10 +1595,13 @@ def evaluate_quiz_ai(request):
 
         response.raise_for_status()
         result = response.json()
+
+        print("Combined Prompt:", combined_prompt)
+
         print("Together API response:", result)
 
         ai_content = result["choices"][0]["message"]["content"]
-        import json
+
         try:
             evaluations = json.loads(ai_content)
         except json.JSONDecodeError:
@@ -1533,19 +1609,28 @@ def evaluate_quiz_ai(request):
 
 
         for idx, evaluation in enumerate(evaluations):
-            assigned_score = questions[idx].get("assigned_score", 1)
+            student_answer = questions[idx].get("student_answer", "")
+            correct_answer = questions[idx].get("correct_answer", "")
+            assigned_score = questions[idx].get("assigned_score")
+
             is_correct = evaluation.get("is_correct", False)
-            raw_score = evaluation.get("score", 0) or 0
+            score = evaluation.get("score", 0) or 0
 
             if is_correct:
-                scaled_score = min(raw_score, assigned_score)
+                evaluation["score"] = min(score, assigned_score)
+                evaluation["feedback"] = random.choice(positive_feedbacks)
+                continue
+
+            # Heuristic check
+            if math_equivalent(student_answer, correct_answer) or numeric_equivalent(student_answer, correct_answer):
+                evaluation["is_correct"] = True
+                evaluation["score"] = assigned_score
+                evaluation["feedback"] = random.choice(positive_feedbacks)
+ 
             else:
-                scaled_score = 0
+                evaluation["score"] = 0  
 
-            evaluation["score"] = scaled_score
-
-
-        print(evaluations)
+        print(f"EVALUATION RESPONSE: {evaluations}")
 
         return Response({"results": evaluations}, status=200)
 

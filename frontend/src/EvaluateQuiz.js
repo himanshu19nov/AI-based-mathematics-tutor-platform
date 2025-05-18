@@ -263,7 +263,18 @@ const handleEvaluateAI = async () => {
             <label className="bold-text">Quiz Level</label>
             <select
               value={quizLevel}
-              onChange={(e) => setQuizLevel(e.target.value)}
+              onChange={(e) => {
+                setQuizLevel(e.target.value)
+                // Clear previous selection
+                setQuizName('');
+                setQuizId(null);
+                setSelectedAttempt(null);
+                setUsername('');
+                setExamId(null);
+                setQuizData([]);
+                setAnswers({});
+                setCurrentQuestionIndex(0);              
+              }}
             >
               <option value="">Select Level</option>
               {[
@@ -283,6 +294,15 @@ const handleEvaluateAI = async () => {
 
               const selectedQuiz = quizOptions.find(q => q.quiz_title === selectedTitle);
               setQuizId(selectedQuiz ? selectedQuiz.quiz_id : null);
+
+              // clear previous selection
+              setSelectedAttempt(null);
+              setUsername('');
+              setExamId(null);
+              setQuizData([]);
+              setAnswers({});
+              setCurrentQuestionIndex(0);
+
             }}>
                 <option value="">Select Quiz</option>
               {quizNameOptions.map((name, idx) => (
