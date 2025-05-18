@@ -136,8 +136,8 @@ const App = () => {
       console.log('Backend Response:', response.data);
       alert('Question created successfully!');
     } catch (error) {
-      console.error('Error submitting the form:', error);
-      alert('Error submitting the form');
+      console.error('Error creating the question:', error);
+      alert('Error creating the question');
     }
   };
 
