@@ -35,6 +35,7 @@ function EvaluateQuiz() {
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   useEffect(() => {
     const token = sessionStorage.getItem('token');
@@ -101,6 +102,60 @@ function EvaluateQuiz() {
           alert("Failed to load exam data.");
         }
       };
+
+
+const handleEvaluateAI = async () => {
+  if (!quizData || quizData.length === 0) return;
+
+  setIsEvaluating(true);
+
+  const payload = {
+    questions: quizData.map(question => ({
+      question_text: question.question,
+      student_answer: question.user_answer || "",
+      correct_answer: question.correct_answer,
+      assigned_score: question.assigned_score || 1,
+    })),
+  };
+
+  try {
+    const response = await fetch(`${apiUrl}/api/evaluate_quiz_ai/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || `AI evaluation failed with status ${response.status}`);
+    }
+
+    const result = await response.json();
+    const evaluations = result.results;
+
+    const updatedQuizData = quizData.map((question, index) => ({
+      ...question,
+      teacher_comment: evaluations[index]?.feedback || "",
+      student_mark: evaluations[index]?.score ?? question.student_mark ?? 0,
+      assigned_score: question.assigned_score, 
+    }));
+
+    setQuizData(updatedQuizData);
+
+  } catch (error) {
+    console.error("Error evaluating quiz with AI:", error.message);
+  } finally {
+    setIsEvaluating(false); 
+  }
+};
+
+
+
+
+
+
 
       const renderInputForQuestion = (question, index) => {
         const selected = answers[question.questionId] || (question.ans_type === 'multiple_choice' ? [] : '');
@@ -208,7 +263,18 @@ function EvaluateQuiz() {
             <label className="bold-text">Quiz Level</label>
             <select
               value={quizLevel}
-              onChange={(e) => setQuizLevel(e.target.value)}
+              onChange={(e) => {
+                setQuizLevel(e.target.value)
+                // Clear previous selection
+                setQuizName('');
+                setQuizId(null);
+                setSelectedAttempt(null);
+                setUsername('');
+                setExamId(null);
+                setQuizData([]);
+                setAnswers({});
+                setCurrentQuestionIndex(0);              
+              }}
             >
               <option value="">Select Level</option>
               {[
@@ -228,6 +294,15 @@ function EvaluateQuiz() {
 
               const selectedQuiz = quizOptions.find(q => q.quiz_title === selectedTitle);
               setQuizId(selectedQuiz ? selectedQuiz.quiz_id : null);
+
+              // clear previous selection
+              setSelectedAttempt(null);
+              setUsername('');
+              setExamId(null);
+              setQuizData([]);
+              setAnswers({});
+              setCurrentQuestionIndex(0);
+
             }}>
                 <option value="">Select Quiz</option>
               {quizNameOptions.map((name, idx) => (
@@ -258,8 +333,16 @@ function EvaluateQuiz() {
                 </option>
             ))}
             </select>
-            <button className="load-button" onClick={handleLoadExam} disabled={!examId}>
+            <button className="load-button" onClick={handleLoadExam} disabled={isEvaluating || !examId}>
             Load Exam
+            </button>
+
+            <button
+              className="load-button"
+              onClick={handleEvaluateAI}
+              disabled={isEvaluating || !examId || !quizData.length}
+            >
+              {isEvaluating ? "Evaluating..." : "AI Evaluate"}
             </button>
 
         </div>
@@ -295,7 +378,7 @@ function EvaluateQuiz() {
                     <label><strong>Acquired Mark / Assigned Score:</strong></label>
                     <input
                         type="number"
-                        value={quizData[currentQuestionIndex].student_mark || ''}
+                        value={quizData[currentQuestionIndex].student_mark ?? ''}
                         onChange={(e) => {
                         const newQuizData = [...quizData];
                         newQuizData[currentQuestionIndex].student_mark = e.target.value;

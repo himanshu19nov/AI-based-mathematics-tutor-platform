@@ -450,6 +450,11 @@ def ask_ai(request):
             messages = [
             {"role": "system", 
              "content": f"You are a helpful math tutor. Use the provided knowledge to assist the student. Here is some relevant knowledge: {context_text.strip()}. {personal_instruction}"}
+            #  "content": (
+            #     f"You are a helpful math tutor. Use only the information provided in the knowledge base below. "
+            #     f"=== KNOWLEDGE BASE START ===\n{context_text.strip()}\n=== KNOWLEDGE BASE END ===\n\n"
+            #     f"{personal_instruction}"
+            # )}
         ]
         else:
             messages = [
@@ -1291,15 +1296,21 @@ def create_question_ai(request):
 
         category = request.data.get("category")
         difficulty = request.data.get("difficulty")
-        level = request.data.get("level", "Year 8")
+        clean_difficulty = difficulty.replace("_", " ").lower()
+        # level = request.data.get("level", "Year 8")
 
         if not category or not difficulty:
             return Response({"error": "Missing category or difficulty."}, status=400)
 
         # Generate AI prompt
         prompt = (
-            f"Generate one {difficulty.lower()} level {category.lower()} question for a {level} student. "
-            f"Return the response as JSON with keys: 'question_text', 'answers' (list of 4), and 'correct_answer'."
+            # f"Generate one {difficulty.lower()} level {category.lower()} question for a {level} student. "
+            # f"Return the response as JSON with keys: 'question_text', 'answers' (list of 4), and 'correct_answer'."
+            f"Generate one {category.lower()} question suitable or a student in {clean_difficulty}. "
+            f"**ONLY** Return the response as JSON with following keys:"
+            f"- 'question_text': the question. "
+            f"- 'correct_answer': a **string** summarizing the final answer."
+            f"Do not return any response including Note outside the JSON object."
         )
 
         headers = {
@@ -1324,29 +1335,39 @@ def create_question_ai(request):
 
         ai_content = result["choices"][0]["message"]["content"]
 
+        print(ai_content)
+
         # Attempt to safely evaluate the JSON response
         try:
             question_data = json.loads(ai_content)
         except json.JSONDecodeError:
             return Response({"error": "AI did not return valid JSON.", "raw": ai_content}, status=502)
 
-        # Save to DB using your existing Question model
-        new_question = Question.objects.create(
-            question_text=question_data["question_text"],
-            correct_answer=question_data["correct_answer"],
-            category=category,
-            difficulty_level=difficulty,
-            # Teacher-related information can be managed elsewhere (e.g., through a Quiz or User relation)
-        )
+        # # Save to DB using your existing Question model
+        # new_question = Question.objects.create(
+        #     question_text=question_data["question_text"],
+        #     correct_answer=question_data["correct_answer"],
+        #     category=category,
+        #     difficulty_level=difficulty,
+        #     # Teacher-related information can be managed elsewhere (e.g., through a Quiz or User relation)
+        # )
 
+        # return Response({
+        #     "message": "AI-generated question created successfully.",
+        #     "question": {
+        #         "question_id": new_question.question_id,
+        #         "question_text": new_question.question_text,
+        #         "correct_answer": new_question.correct_answer,
+        #         "category": new_question.category,
+        #         "difficulty": new_question.difficulty_level
+        #     }
+        # }, status=201)
+    
         return Response({
             "message": "AI-generated question created successfully.",
             "question": {
-                "question_id": new_question.question_id,
-                "question_text": new_question.question_text,
-                "correct_answer": new_question.correct_answer,
-                "category": new_question.category,
-                "difficulty": new_question.difficulty_level
+                "question_text": question_data["question_text"],
+                "correct_answer": question_data["correct_answer"],
             }
         }, status=201)
 
@@ -1355,62 +1376,267 @@ def create_question_ai(request):
         return Response({"error": "Something went wrong", "details": str(e)}, status=500)
 
 
+# @csrf_exempt
+# @api_view(['POST'])
+# def evaluate_quiz_ai(request):
+
+#     try:
+#         TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
+#         if not TOGETHER_API_KEY:
+#             return Response({"error": "Together API key not set."}, status=500)
+
+#         # question_text = request.data.get("question_text")
+#         # student_answer = request.data.get("student_answer")
+#         # correct_answer = request.data.get("correct_answer")
+
+#         # if not all([question_text, student_answer, correct_answer]):
+#         #     return Response({"error": "Missing required fields."}, status=400)
+
+#         # prompt = (
+#         #     f"Question: {question_text}\n"
+#         #     f"Student Answer: {student_answer}\n"
+#         #     f"Correct Answer: {correct_answer}\n"
+#         #     f"Evaluate the student’s answer. Return a JSON object with: "
+#         #     f"'is_correct' (true/false), 'score' (0 or 1), and 'feedback' (string)."
+#         # )
+
+#         questions = request.data.get("questions")
+#         if not questions or not isinstance(questions, list):
+#             return Response({"error": "Missing or invalid 'questions' field. Expected a list."}, status=400)
+
+
+#         headers = {
+#             "Authorization": f"Bearer {TOGETHER_API_KEY}",
+#             "Content-Type": "application/json"
+#         }
+
+
+#         results = []
+#         delay_seconds = 0.5  # half-second delay between calls
+
+#         for i, q in enumerate(questions):
+#             question_text = q.get("question_text")
+#             student_answer = q.get("student_answer")
+#             correct_answer = q.get("correct_answer")
+
+#             if not all([question_text, student_answer, correct_answer]):
+#                 results.append({"error": f"Missing fields for question index {i}"})
+#                 continue
+
+#             prompt = (
+#                 f"Question: {question_text}\n"
+#                 f"Student Answer: {student_answer}\n"
+#                 f"Correct Answer: {correct_answer}\n"
+#                 f"Evaluate the student’s answer. Return a JSON object with: "
+#                 f"'is_correct' (true/false), 'score' (0 or 1), and 'feedback' (string)."
+#             )
+
+#             payload = {
+#                 "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+#                 "messages": [
+#                     {"role": "system", "content": "You are a helpful math tutor. Respond only in JSON."},
+#                     {"role": "user", "content": prompt}
+#                 ],
+#                 "temperature": 0.5,
+#                 "top_p": 0.9,
+#                 "max_tokens": 256
+#             }
+
+#             start = time.time()
+#             try:
+#                 response = requests.post(
+#                     "https://api.together.xyz/v1/chat/completions",
+#                     headers=headers,
+#                     json=payload,
+#                     timeout=30
+#                 )
+#                 duration = time.time() - start
+#                 print(f"Together API call duration: {duration:.2f} seconds for question index {i}")
+
+#                 response.raise_for_status()
+
+#                 result = response.json()
+#                 print(f"Together API response for question index {i}:", result)
+
+#                 ai_content = result["choices"][0]["message"]["content"]
+
+#                 try:
+#                     evaluation = json.loads(ai_content)
+#                 except json.JSONDecodeError:
+#                     evaluation = {"error": "AI returned invalid JSON", "raw": ai_content}
+
+#                 results.append(evaluation)
+
+#             except requests.exceptions.RequestException as req_err:
+#                 print(f"Together API request failed for question index {i}:", str(req_err))
+#                 results.append({"error": "AI API request failed", "details": str(req_err)})
+
+#             time.sleep(delay_seconds)
+
+#         return Response({"results": results}, status=200)
+
+#     except Exception as e:
+#         traceback.print_exc()
+#         return Response({"error": "Something went wrong", "details": str(e)}, status=500)
+
+import re
+# Ensure AI evaluation return valid format
+def extract_json_array(text):
+    # Extract first valid JSON array in the response
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r"\[\s*{.*?}\s*\]", text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+    return None
+
+
+from sympy import sympify, simplify
+from sympy.parsing.sympy_parser import parse_expr
+import json
+import random
+
+def math_equivalent(ans1: str, ans2: str) -> bool:
+    try:
+        def clean(x):
+            return re.sub(r'[^\d\w\^\+\-\*/\.\(\)]', '', x.lower())
+        expr1 = simplify(sympify(clean(ans1)))
+        expr2 = simplify(sympify(clean(ans2)))
+        return expr1.equals(expr2)
+    except Exception:
+        return False
+
+def numeric_equivalent(ans1: str, ans2: str, tolerance: float = 0.01) -> bool:
+    try:
+        def extract_number(s):
+            nums = re.findall(r"\d+(?:\.\d+)?", s)
+            return float(nums[0]) if nums else None
+        n1 = extract_number(ans1)
+        n2 = extract_number(ans2)
+        if n1 is not None and n2 is not None:
+            return abs(n1 - n2) <= tolerance * max(1, abs(n2))
+        return False
+    except Exception:
+        return False
+
 
 @csrf_exempt
 @api_view(['POST'])
 def evaluate_quiz_ai(request):
+
+
+    positive_feedbacks = [
+        "Correct!",
+        "Well done!",
+        "Great job!",
+        "That's right!",
+        "Excellent work!",
+        "You nailed it!",
+        "Perfect answer!",
+        "Nice one!",
+        "Spot on!",
+        "You got it!"
+    ]
 
     try:
         TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
         if not TOGETHER_API_KEY:
             return Response({"error": "Together API key not set."}, status=500)
 
-        question_text = request.data.get("question_text")
-        student_answer = request.data.get("student_answer")
-        correct_answer = request.data.get("correct_answer")
+        questions = request.data.get("questions")
+        if not questions or not isinstance(questions, list):
+            return Response({"error": "Missing or invalid questions field."}, status=400)
 
-        if not all([question_text, student_answer, correct_answer]):
-            return Response({"error": "Missing required fields."}, status=400)
-
-        prompt = (
-            f"Question: {question_text}\n"
-            f"Student Answer: {student_answer}\n"
-            f"Correct Answer: {correct_answer}\n"
-            f"Evaluate the student’s answer. Return a JSON object with: "
-            f"'is_correct' (true/false), 'score' (0 or 1), and 'feedback' (string)."
+        # Create a combined prompt for all questions
+        combined_prompt = (
+            "You are evaluating student math answers. For each question, do the math yourself. "
+            "Only mark is_correct: true if the student answer is mathematically accurate. "
+            "Give feedback with reasoning steps when the answer is wrong.\n\n"
+            "Return JSON: [ { is_correct, score, feedback }, ... ]\n"
         )
-
+ 
+        
+        for i, q in enumerate(questions):
+            combined_prompt += (
+                f"Question {i+1}: {q['question_text']}\n"
+                f"- Student Answer: {q['student_answer']}\n"
+                f"- Correct Answer: {q['correct_answer']}\n"
+                f"- Compare: Is \"{q['student_answer']}\" mathematically equal to \"{q['correct_answer']}\"?\n"
+                f"- Assigned Score: {q.get('assigned_score', 1)}\n\n"
+            )
 
         headers = {
             "Authorization": f"Bearer {TOGETHER_API_KEY}",
             "Content-Type": "application/json"
         }
 
-
         payload = {
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "messages": [
-                {"role": "system", "content": "You are a helpful math tutor. Respond only in JSON."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": 
+                    "You are a strict math evaluator. Return a JSON array with one object per question, each including:\n"
+                    " - is_correct (boolean)\n"
+                    " - score (0 to assigned_score)\n"
+                    " - feedback (brief explanation).\n"
+                    "Do not assume student answers are correct unless they exactly match or show valid reasoning."},
+                {"role": "user", "content": combined_prompt}
             ],
             "temperature": 0.5,
             "top_p": 0.9,
-            "max_tokens": 256
+            "max_tokens": 1024
         }
 
+
         response = requests.post("https://api.together.xyz/v1/chat/completions", headers=headers, json=payload)
+
+        response.raise_for_status()
         result = response.json()
+
+        print("Combined Prompt:", combined_prompt)
+
+        print("Together API response:", result)
+
         ai_content = result["choices"][0]["message"]["content"]
 
-        import json
         try:
-            evaluation = json.loads(ai_content)
+            evaluations = json.loads(ai_content)
         except json.JSONDecodeError:
             return Response({"error": "AI returned invalid JSON.", "raw": ai_content}, status=502)
 
-        return Response(evaluation, status=200)
 
+        for idx, evaluation in enumerate(evaluations):
+            student_answer = questions[idx].get("student_answer", "")
+            correct_answer = questions[idx].get("correct_answer", "")
+            assigned_score = questions[idx].get("assigned_score")
 
+            is_correct = evaluation.get("is_correct", False)
+            score = evaluation.get("score", 0) or 0
+
+            if is_correct:
+                evaluation["score"] = min(score, assigned_score)
+                evaluation["feedback"] = random.choice(positive_feedbacks)
+                continue
+
+            # Heuristic check
+            if math_equivalent(student_answer, correct_answer) or numeric_equivalent(student_answer, correct_answer):
+                evaluation["is_correct"] = True
+                evaluation["score"] = assigned_score
+                evaluation["feedback"] = random.choice(positive_feedbacks)
+ 
+            else:
+                evaluation["score"] = 0  
+
+        print(f"EVALUATION RESPONSE: {evaluations}")
+
+        return Response({"results": evaluations}, status=200)
+
+    except requests.exceptions.RequestException as req_err:
+        print("Together API request failed:", str(req_err))
+        return Response({"error": "AI API request failed"}, status=502)
     except Exception as e:
         traceback.print_exc()
         return Response({"error": "Something went wrong", "details": str(e)}, status=500)

@@ -26,7 +26,29 @@ const QuestionSearch = () => {
 
   const token = sessionStorage.getItem('token');
 
-  // Fetch questions when question level or category changes
+// Fetch questions when question level or category changes
+const fetchQuestions = () => {
+  if (questionLevel && questionCategory) {
+    axios.get(`${apiUrl}/api/search_questions/`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      params: {
+        difficulty_level: questionLevel,
+        category: questionCategory,
+      }
+    })
+    .then(response => {
+      console.log("✅ Questions fetched from backend:", response.data);
+      setQuestions(response.data);
+    })
+    .catch(error => {
+      console.error("There was an error fetching the questions:", error);
+    });
+  }
+};
+
+ 
   useEffect(() => {
     if (questionLevel && questionCategory) {
       // Reset view state
@@ -34,23 +56,7 @@ const QuestionSearch = () => {
       setSelectedQuestion(null);
       setAction(null);
 
-      // axios.get('http://localhost:8000/api/search_questions/', {
-      axios.get(`${apiUrl}/api/search_questions/`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-        params: {
-          difficulty_level: questionLevel,
-          category: questionCategory,
-        }
-      })
-      .then(response => {
-        console.log("✅ Questions fetched from backend:", response.data);
-        setQuestions(response.data);
-      })
-      .catch(error => {
-        console.error("There was an error fetching the questions:", error);
-      });
+      fetchQuestions();
     }
   }, [questionLevel, questionCategory]);
 
@@ -70,6 +76,7 @@ const QuestionSearch = () => {
       correctAnswer: question.correct_answer || ''
     });
     setShowQuestion(true); // Show the form when modifying a question
+    console.log("Selected question before modify:", selectedQuestion);
     setAction('modify');
   };
 
@@ -95,6 +102,7 @@ const QuestionSearch = () => {
   // Handle delete action
   const handleDelete = (question) => {
     setSelectedQuestion(question);
+    console.log("Selected question before delete:", selectedQuestion);
     setAction('delete');
   };
 
@@ -119,7 +127,7 @@ const QuestionSearch = () => {
   const handleConfirmModify = async () => {
     try {
       // await axios.put(`http://localhost:8000/api/questions/${selectedQuestion.id}/`, {
-      await axios.put(`${apiUrl}/api/questions/${selectedQuestion.id}/`, {
+      await axios.put(`${apiUrl}/api/questions/${selectedQuestion.question_id}/`, {
         text: questionData.questionInput,
         level: questionData.questionLevel,
         category: questionData.questionCategory,
@@ -131,6 +139,7 @@ const QuestionSearch = () => {
       setShowQuestion(false);
       setAction(null);
       setSelectedQuestion(null);
+      fetchQuestions();
     } catch (error) {
       console.error('Error modifying question', error);
     }
@@ -140,10 +149,11 @@ const QuestionSearch = () => {
   const handleConfirmDelete = async () => {
     try {
       // await axios.delete(`http://localhost:8000/api/questions/${selectedQuestion.id}/delete/`);
-      await axios.delete(`${apiUrl}/api/questions/${selectedQuestion.id}/delete/`);
+      await axios.delete(`${apiUrl}/api/questions/${selectedQuestion.question_id}/delete/`);
       alert('Question deleted successfully');
       setAction(null);
       setSelectedQuestion(null);
+      fetchQuestions();
     } catch (error) {
       console.error('Error deleting question', error);
     }
@@ -268,7 +278,7 @@ const QuestionSearch = () => {
                 rows="5"
                 readOnly={action === 'view'}
               />
-              <input type="file" name="questionImage" id="questionImage" />
+              {/* <input type="file" name="questionImage" id="questionImage" /> */}
             </div>
 
             {/* Question Category */}
